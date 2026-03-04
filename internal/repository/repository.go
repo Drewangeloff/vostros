@@ -55,6 +55,13 @@ type Repository interface {
 	DeleteRefreshToken(ctx context.Context, tokenID string) error
 	DeleteRefreshTokensByUser(ctx context.Context, userID string) error
 
+	// API tokens
+	CreateAPIToken(ctx context.Context, token *model.APIToken) error
+	ListAPITokensByUser(ctx context.Context, userID string) ([]*model.APIToken, error)
+	DeleteAPIToken(ctx context.Context, id string, userID string) error
+	GetAPITokenByHash(ctx context.Context, hash string) (*model.APIToken, error)
+	TouchAPIToken(ctx context.Context, id string) error
+
 	// Agent actions
 	CreateAgentAction(ctx context.Context, action *model.AgentAction) error
 	GetAgentActions(ctx context.Context, since time.Time, limit int) ([]*model.AgentAction, error)

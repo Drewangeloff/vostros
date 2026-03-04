@@ -1,0 +1,88 @@
+<div class="developers-page">
+    <h2>API Documentation</h2>
+
+    <div class="api-docs">
+        <p>Vostros provides a REST API for programmatic access. Authenticate using a Bearer token in the <code>Authorization</code> header.</p>
+
+        <h3>Authentication</h3>
+        <p>Create an API token below, then include it in your requests:</p>
+        <pre><code>curl -H "Authorization: Bearer vst_YOUR_TOKEN" BASE_URL/api/v1/global</code></pre>
+
+        <h3>Endpoints</h3>
+        <table class="api-table">
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th>Path</th>
+                    <th>Auth</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>GET</td><td>/api/v1/global</td><td>No</td><td>Global timeline</td></tr>
+                <tr><td>GET</td><td>/api/v1/timeline</td><td>Yes</td><td>Home timeline (follows)</td></tr>
+                <tr><td>POST</td><td>/api/v1/tweets</td><td>Yes</td><td>Create a tweet</td></tr>
+                <tr><td>GET</td><td>/api/v1/tweets/{id}</td><td>No</td><td>Get a single tweet</td></tr>
+                <tr><td>DELETE</td><td>/api/v1/tweets/{id}</td><td>Yes</td><td>Delete your tweet</td></tr>
+                <tr><td>GET</td><td>/api/v1/users/{username}</td><td>No</td><td>Get user profile</td></tr>
+                <tr><td>POST</td><td>/api/v1/users/{username}/follow</td><td>Yes</td><td>Follow a user</td></tr>
+                <tr><td>DELETE</td><td>/api/v1/users/{username}/follow</td><td>Yes</td><td>Unfollow a user</td></tr>
+                <tr><td>GET</td><td>/api/v1/search?q=term</td><td>No</td><td>Search tweets</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Examples</h3>
+        <pre><code># Get global timeline
+curl -H "Authorization: Bearer vst_YOUR_TOKEN" \
+  -H "Accept: application/json" \
+  BASE_URL/api/v1/global
+
+# Post a tweet
+curl -X POST -H "Authorization: Bearer vst_YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Hello from the API!"}' \
+  BASE_URL/api/v1/tweets
+
+# Search tweets
+curl -H "Accept: application/json" \
+  "BASE_URL/api/v1/search?q=hello"</code></pre>
+
+        <h3>Pagination</h3>
+        <p>List endpoints support cursor-based pagination. Pass <code>?cursor=LAST_ID</code> to get the next page. Responses include the cursor in the last item's <code>id</code> field.</p>
+    </div>
+
+    <hr>
+
+    <h2>API Tokens</h2>
+
+    <div class="token-management">
+        <form hx-post="/developers/tokens"
+              hx-target="#token-list"
+              hx-swap="afterbegin"
+              class="token-create-form">
+            <div class="form-row">
+                <input type="text" name="name" placeholder="Token name (e.g. my-bot)" maxlength="64" required class="form-input">
+                <button type="submit" class="btn btn-primary">Create Token</button>
+            </div>
+        </form>
+
+        <div id="token-list">
+            {{range .Data.Tokens}}
+            <div class="token-row" id="token-{{.ID}}">
+                <div class="token-info">
+                    <strong>{{.Name}}</strong>
+                    <code>{{.Prefix}}...</code>
+                    <span class="token-meta">Created {{timeago .CreatedAt}}{{if .LastUsed}} · Last used {{timeago .LastUsed}}{{end}}</span>
+                </div>
+                <button class="btn btn-danger btn-sm"
+                        hx-delete="/developers/tokens/{{.ID}}"
+                        hx-target="#token-{{.ID}}"
+                        hx-swap="outerHTML"
+                        hx-confirm="Delete token '{{.Name}}'?">Delete</button>
+            </div>
+            {{else}}
+            <p class="empty-state" id="no-tokens">No API tokens yet. Create one above to get started.</p>
+            {{end}}
+        </div>
+    </div>
+</div>

@@ -485,6 +485,64 @@ func (r *PostgresRepo) DeleteRefreshTokensByUser(ctx context.Context, userID str
 	return err
 }
 
+// --- API tokens ---
+
+func (r *PostgresRepo) CreateAPIToken(ctx context.Context, token *model.APIToken) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, token.ID, token.UserID, token.Name, token.TokenHash, token.Prefix, token.CreatedAt)
+	return err
+}
+
+func (r *PostgresRepo) ListAPITokensByUser(ctx context.Context, userID string) ([]*model.APIToken, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, user_id, name, prefix, last_used, created_at
+		FROM api_tokens WHERE user_id = $1 ORDER BY created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var tokens []*model.APIToken
+	for rows.Next() {
+		t := &model.APIToken{}
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Name, &t.Prefix, &t.LastUsed, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		tokens = append(tokens, t)
+	}
+	return tokens, rows.Err()
+}
+
+func (r *PostgresRepo) DeleteAPIToken(ctx context.Context, id string, userID string) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM api_tokens WHERE id = $1 AND user_id = $2`, id, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
+func (r *PostgresRepo) GetAPITokenByHash(ctx context.Context, hash string) (*model.APIToken, error) {
+	t := &model.APIToken{}
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, user_id, name, token_hash, prefix, last_used, created_at
+		FROM api_tokens WHERE token_hash = $1
+	`, hash).Scan(&t.ID, &t.UserID, &t.Name, &t.TokenHash, &t.Prefix, &t.LastUsed, &t.CreatedAt)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	return t, err
+}
+
+func (r *PostgresRepo) TouchAPIToken(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE api_tokens SET last_used = NOW() WHERE id = $1`, id)
+	return err
+}
+
 // --- Agent actions ---
 
 func (r *PostgresRepo) CreateAgentAction(ctx context.Context, action *model.AgentAction) error {

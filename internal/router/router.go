@@ -41,6 +41,11 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	mux.Handle("GET /settings", requireAuth(h.ShowSettings))
 	mux.Handle("POST /settings", requireAuth(h.UpdateSettings))
 
+	// Developers / API tokens (require auth)
+	mux.Handle("GET /developers", requireAuth(h.ShowAPI))
+	mux.Handle("POST /developers/tokens", requireAuth(h.CreateAPIToken))
+	mux.Handle("DELETE /developers/tokens/{id}", requireAuth(h.DeleteAPIToken))
+
 	// Web routes (public reads)
 	mux.HandleFunc("GET /{$}", h.Home)
 	mux.HandleFunc("GET /global", h.Global)

@@ -72,6 +72,16 @@ type RefreshToken struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type APIToken struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Name      string     `json:"name"`
+	TokenHash string     `json:"-"`
+	Prefix    string     `json:"prefix"`
+	LastUsed  *time.Time `json:"last_used"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
 type AgentAction struct {
 	ID         string    `json:"id"`
 	AgentID    string    `json:"agent_id"`

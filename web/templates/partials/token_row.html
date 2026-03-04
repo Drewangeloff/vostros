@@ -1,0 +1,12 @@
+<div class="token-row" id="token-{{.TokenID}}">
+    <div class="token-info">
+        <strong>{{.TokenName}}</strong>
+        <code>{{.Prefix}}...</code>
+        <span class="token-meta">Created just now</span>
+    </div>
+    <button class="btn btn-danger btn-sm"
+            hx-delete="/developers/tokens/{{.TokenID}}"
+            hx-target="#token-{{.TokenID}}"
+            hx-swap="outerHTML"
+            hx-confirm="Delete token '{{.TokenName}}'?">Delete</button>
+</div>

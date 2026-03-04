@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -24,6 +27,27 @@ func (m *Middleware) OptionalAuth(next http.Handler) http.Handler {
 		tokenStr := extractToken(r)
 		if tokenStr == "" {
 			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Check if this is an API token (vst_ prefix) rather than a JWT
+		if strings.HasPrefix(tokenStr, "vst_") {
+			hash := sha256.Sum256([]byte(tokenStr))
+			hashHex := hex.EncodeToString(hash[:])
+			apiToken, err := m.repo.GetAPITokenByHash(r.Context(), hashHex)
+			if err != nil || apiToken == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			user, err := m.repo.GetUserByID(r.Context(), apiToken.UserID)
+			if err != nil || user == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			// Touch last_used in background (best-effort, detached context)
+			go m.repo.TouchAPIToken(context.Background(), apiToken.ID)
+			ctx := ctxutil.SetUser(r.Context(), user)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
