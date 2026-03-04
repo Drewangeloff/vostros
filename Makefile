@@ -20,7 +20,7 @@ cloud-build:
 
 deploy:
 	gcloud run deploy vostros \
-		--image us-central1-docker.pkg.dev/vostros/bird/vostros:latest \
+		--image us-central1-docker.pkg.dev/old-school-bird/bird/vostros:latest \
 		--region us-central1 \
 		--platform managed \
 		--allow-unauthenticated \
