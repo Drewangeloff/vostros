@@ -1,0 +1,21 @@
+{{if .Users}}
+<div class="user-results">
+    <h3 class="results-heading">People</h3>
+    {{range .Users}}
+    <a href="/u/{{.Username}}" class="user-card">
+        <div class="avatar-placeholder avatar-sm">{{slice .Username 0 1}}</div>
+        <div class="user-card-info">
+            <div class="user-card-name">{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}</div>
+            <div class="user-card-username">@{{.Username}}</div>
+            {{if .Bio}}<div class="user-card-bio">{{.Bio}}</div>{{end}}
+        </div>
+    </a>
+    {{end}}
+</div>
+{{end}}
+
+{{if .Tweets}}
+<h3 class="results-heading">Tweets</h3>
+{{end}}
+
+{{template "tweet_list.html" (map "Tweets" .Tweets "NextCursor" .NextCursor "TimelineURL" .TimelineURL)}}

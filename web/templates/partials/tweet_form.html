@@ -1,0 +1,15 @@
+<form class="tweet-compose"
+      hx-post="/tweet"
+      hx-target=".tweet-list"
+      hx-swap="afterbegin"
+      hx-on::after-request="if(event.detail.successful) { this.reset(); this.querySelector('.char-count').textContent=''; }">
+    <textarea name="content"
+              placeholder="What's happening?"
+              maxlength="256"
+              rows="3"
+              required></textarea>
+    <div class="tweet-compose-footer">
+        <span class="char-count"></span>
+        <button type="submit" class="btn btn-primary btn-sm">Tweet</button>
+    </div>
+</form>

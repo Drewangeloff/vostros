@@ -4,13 +4,13 @@ An infinitely scalable clone of old-school Twitter (2006–2012 era), fully oper
 
 ---
 
-## Current Plan: v0.3
+## Current Plan: v0.4
 
 > **Last updated:** 2026-03-02
-> **Status:** Draft
-> **Summary:** Hardened version of v0.2 — honest about managed dependencies, fixes cold start / fan-out / moderation / cost model problems
+> **Status:** Building
+> **Summary:** Neon Postgres from day one, multi-instance Cloud Run, CSRF protection, clean route namespacing
 
-[Jump to current plan →](#v03--hardened-zero-cost-autonomous-honest-about-trade-offs)
+[Jump to current plan →](#v04--neon-postgres-from-day-one-actually-scalable)
 
 ---
 
@@ -20,12 +20,13 @@ An infinitely scalable clone of old-school Twitter (2006–2012 era), fully oper
 |---------|------|---------|
 | v0.1 | 2026-03-02 | Initial architecture — managed services, one part-time human |
 | v0.2 | 2026-03-02 | Fully agent-operated, zero-cost-at-zero-users, "all open source" on Cloud Run |
-| v0.3 | 2026-03-02 | **CURRENT** — Hardened v0.2: SQLite early stage, sync moderation, async fan-out, realistic costs, infra safety nets |
+| v0.3 | 2026-03-02 | Hardened v0.2: SQLite early stage, sync moderation, async fan-out, realistic costs, infra safety nets |
+| v0.4 | 2026-03-02 | **CURRENT** — Drop SQLite/Litestream, Neon Postgres from day one, multi-instance, CSRF, /u/ routes |
 
 ---
 ---
 
-## v0.3 — Hardened, Zero-Cost, Autonomous, Honest About Trade-offs
+## v0.4 — Neon Postgres from Day One, Actually Scalable
 
 > **THIS IS THE CURRENT PLAN**
 
@@ -33,11 +34,37 @@ An infinitely scalable clone of old-school Twitter (2006–2012 era), fully oper
 
 1. **$0/mo at zero users** (true scale-to-zero)
 2. **Fully agent-operated** — no human in the loop at steady state
-3. **Open-source-core with serverless managed services** — the application code and data model are fully open source and portable; we use managed services (Neon, Upstash) for serverless pricing but every component can be swapped for a self-hosted alternative
+3. **Open-source-core with serverless managed services** — application code is fully open source and portable; we use managed services (Neon, Upstash) for serverless pricing
 4. **Runs on Cloud Run** (serverless containers, scale to zero, pay-per-request)
-5. **Cost grows linearly** (or sub-linearly) with usage
+5. **Multi-instance from day one** — actually scalable, not artificially limited
 6. **No content goes live without passing moderation** — synchronous safety in the write path
 7. **Infrastructure safety nets** — budget caps, instance limits, dead man's switches
+8. **Go + HTMX frontend** — server-rendered HTML, HTMX for interactivity, JSON REST API for agents
+
+### What Changed from v0.3
+
+| Problem in v0.3 | Fix in v0.4 |
+|------------------|-------------|
+| SQLite + Litestream forces max-instances=1 (not scalable) | Neon Postgres from day one — multi-instance Cloud Run |
+| Litestream adds operational complexity (restore on cold start, async replication window, GCS config) | Eliminated — Neon handles persistence, replication, backups |
+| SQLite → Postgres migration required at ~1K users (data export, FTS5→tsvector, SQL dialect changes) | No migration needed — start on Postgres, stay on Postgres |
+| FTS5 search requires separate migration to tsvector later | Postgres tsvector from day one |
+| No CSRF protection for cookie-based auth | CSRF token middleware (per-session token in meta tag, HTMX sends via hx-headers) |
+| `GET /{username}` route conflicts with `/timeline`, `/global`, etc. | User profiles at `/u/{username}` — clean namespacing |
+| Frontend stack unresolved (listed as open question) | Decided: Go templates + HTMX |
+| No dev mode for templates | `-dev` flag reads templates from disk with hot-reload |
+
+### What's Retained from v0.3
+
+Everything else from v0.3 carries forward unchanged:
+- Async fan-out via outbox pattern
+- Sync moderation in write path (regex → local classifier → Haiku)
+- Upstash Redis from day one for rate limiting
+- Agent architecture with safety nets (Auditor, dead man's switch, action caps)
+- Cloudflare free tier for CDN/edge
+- GCP observability (Cloud Logging/Monitoring free tier)
+- Infrastructure circuit breakers (max instances, budget alerts)
+- Soft-delete everywhere
 
 ### What Changed from v0.2
 
@@ -67,32 +94,30 @@ Every service is a container image deployed to Cloud Run:
 
 ---
 
-### Database — Phased Approach
+### Database — Neon Postgres (All Phases)
 
-#### Phase 0-1 (0–1K users): SQLite + Litestream
+- **Neon Serverless Postgres** from day one
+- **Scales to zero** — $0 when nobody is querying
+- Uses Neon's built-in **connection pooler** (PgBouncer) — handles Cloud Run's bursty connection patterns on cold start
+- Postgres ecosystem from the start: `tsvector` for search, `LISTEN/NOTIFY` for events, `jsonb` for flexibility
+- Branches for dev/staging are free
+- No migration needed — start on Postgres, stay on Postgres
 
-- **SQLite** embedded in the Go binary — zero external dependencies
-- **Litestream** continuously replicates the SQLite WAL to GCS ($0.01/mo for storage)
-- On cold start: restore from GCS (~200ms for a small DB)
-- Single-writer is fine at this scale (Cloud Run max-instances=1)
-- Truly self-hosted, truly open source, truly $0
-- The Go binary carries its own database — maximum simplicity
+#### Phase 0-1 (0–10K users): Neon free tier
+- 0.5 GB storage, autoscaling compute
+- $0 at zero queries
 
-> **Why start here?** It's the only option that's actually $0 with zero external dependencies. Neon's free tier is generous but it's still a managed service you don't control.
-
-#### Phase 2 (1K–50K users): Neon (Serverless Postgres)
-
-- Migrate when you need concurrent writes or the DB exceeds what's comfortable for SQLite (~1GB)
-- Neon scales to zero compute, pay-per-query
-- Use **PgBouncer** (as a Cloud Run sidecar or Neon's built-in pooler) to handle connection storms on cold start
-- Postgres ecosystem: `tsvector` for search, `LISTEN/NOTIFY` for events, `jsonb` for flexibility
-
-#### Phase 3+ (50K+ users): Neon with read replicas
-
+#### Phase 2 (10K–100K users): Neon Pro
+- More compute, more storage
 - Add read replicas for timeline queries
-- Consider dedicated compute for write-heavy workloads
 
-**Migration path:** The Go service uses a `Repository` interface. Swap `SQLiteRepo` for `PostgresRepo` with zero changes to business logic.
+#### Phase 3+ (100K+ users): Neon Scale
+- Dedicated compute for write-heavy workloads
+- Multiple read replicas
+
+> **Why not SQLite + Litestream?** SQLite forces `max-instances=1` on Cloud Run (single-writer). Litestream adds cold start latency (restore from GCS), an async replication window (potential data loss), and operational complexity. The SQLite → Postgres migration is a significant effort, not a config toggle. Neon gives us $0 at zero usage AND multi-instance scalability from day one.
+
+**Go driver:** `github.com/jackc/pgx/v5` — the standard Postgres driver for Go. Connects via Neon's pooler endpoint.
 
 ---
 
@@ -130,15 +155,13 @@ User posts tweet
 
 ---
 
-### Search — Postgres tsvector (Until You Can't)
+### Search — Postgres tsvector (All Phases, Until You Can't)
 
-- **Phase 0-2:** Postgres full-text search via `tsvector` / `tsquery`
-  - Good enough for old-school Twitter's simple text search
-  - Zero additional infrastructure
-  - Add a GIN index on the tweets table, done
-- **Phase 3+:** Stand up Meilisearch on a dedicated VM (GCE e2-micro = ~$7/mo) or Fly Machine
-  - Fed from Kafka stream
-  - Not on Cloud Run — search indexes need persistent fast storage
+- Postgres full-text search via `tsvector` / `tsquery` from day one
+- Good enough for old-school Twitter's simple text search
+- Zero additional infrastructure — it's just a column + GIN index
+- Auto-updated via a generated column or trigger
+- **Phase 3+** (if needed): Stand up Meilisearch on a dedicated VM (GCE e2-micro = ~$7/mo) for richer search features (typo tolerance, faceting)
 
 > **Why not Meilisearch on Cloud Run?** Cloud Run volumes don't survive scale-to-zero. You'd re-index from scratch on every cold start. Not viable.
 
@@ -167,18 +190,29 @@ User posts tweet
 ```go
 // The whole API is one binary
 cmd/bird/main.go
-  ├── routes (REST: tweets, timeline, follows, search, auth)
-  ├── middleware (auth, rate-limit, sync-moderation)
-  ├── fanout (async outbox processor)
-  ├── repository (interface: SQLiteRepo | PostgresRepo)
-  └── admin (internal API for agent actions)
+  ├── routes
+  │   ├── web (HTML + HTMX: /, /timeline, /global, /u/{username}, /login, /register)
+  │   ├── htmx partials (/htmx/timeline, /htmx/global, etc.)
+  │   ├── api/v1 (JSON: /api/v1/tweets, /api/v1/users, etc.)
+  │   └── admin (/api/v1/admin/* — agent endpoints)
+  ├── middleware (auth, rate-limit, csrf, sync-moderation)
+  ├── fanout (async outbox processor goroutine)
+  ├── repository (PostgresRepo via pgx/v5)
+  └── tmpl (Go html/template + HTMX content negotiation)
 ```
 
 Why Go:
 - **~100-300ms cold starts** (critical for scale-to-zero)
-- Single static binary → tiny container image (~10-15MB with `scratch` base)
+- Single static binary → tiny container image (~12-15MB with `scratch` base)
 - Excellent concurrency for async fan-out
 - Low memory footprint (Cloud Run bills for memory too)
+
+Frontend: **Go `html/template` + HTMX**
+- Server-rendered HTML, no JS build step
+- HTMX for interactivity (infinite scroll, follow/unfollow, tweet posting)
+- User profiles at `/u/{username}` to avoid route conflicts
+- CSRF tokens via meta tag + HTMX `hx-headers` attribute
+- `-dev` flag for template hot-reload during development
 
 ---
 
@@ -319,7 +353,7 @@ The Ops agent queries these via the **GCP Monitoring API** (free). No Grafana, n
 | Component | 0 users | 1K users | 100K users | 1M users |
 |-----------|---------|----------|------------|----------|
 | Cloud Run (API) | $0 | ~$3 | ~$40 | ~$200 |
-| Database (SQLite→Neon) | $0 | $0 (SQLite) | ~$30 | ~$120 |
+| Neon Postgres | $0 | $0 (free tier) | ~$30 | ~$120 |
 | Upstash Redis | $0 | ~$1 | ~$15 | ~$60 |
 | Upstash Kafka | $0 | $0 | ~$15 | ~$60 |
 | Cloud Storage | $0 | ~$0.10 | ~$5 | ~$30 |
@@ -330,7 +364,7 @@ The Ops agent queries these via the **GCP Monitoring API** (free). No Grafana, n
 | Meilisearch (Phase 3+) | $0 | $0 | ~$7 | ~$30 |
 | **Total** | **$0** | **~$12** | **~$312** | **~$2,010** |
 
-> **v0.2 claimed $740 at 1M users. v0.3 says ~$2,010.** The difference is mostly honest LLM costs for synchronous moderation. The infrastructure is still cheap. The safety is what costs money. This is the correct trade-off.
+> **v0.2 claimed $740 at 1M users. v0.3 said ~$2,010. v0.4 is the same cost but simpler** — no SQLite→Postgres migration cost, no Litestream, no max-instances=1 constraint. Same money, better architecture.
 
 ---
 
@@ -338,27 +372,27 @@ The Ops agent queries these via the **GCP Monitoring API** (free). No Grafana, n
 
 ```
 GitHub repo
-  ├── cmd/bird/            → Go API server (single binary)
-  │   ├── main.go
-  │   ├── routes/
-  │   ├── middleware/       → auth, rate-limit, sync-moderation
-  │   ├── fanout/           → async outbox processor
-  │   ├── repository/       → SQLiteRepo, PostgresRepo (interface)
-  │   └── admin/            → internal API for agents
-  ├── agents/               → Agent definitions + tool schemas
-  │   ├── moderator/
-  │   ├── antispam/
-  │   ├── ops/
-  │   ├── support/
-  │   ├── curator/
-  │   └── auditor/
-  ├── models/               → Local ONNX model for fast content classification
-  ├── migrations/           → SQL migrations (SQLite + Postgres)
-  ├── deploy/               → Terraform (Cloud Run, Scheduler, Pub/Sub, budgets)
-  ├── scripts/              → Auditor watchdog, DB migration helper
-  ├── web/                  → Minimal frontend (TBD: HTMX vs SPA)
-  ├── Dockerfile
-  └── docker-compose.yml    → Local dev (SQLite, no cloud dependencies)
+  ├── cmd/bird/main.go         → entry point, wiring, graceful shutdown
+  ├── internal/
+  │   ├── config/              → env-based config
+  │   ├── model/               → domain types
+  │   ├── repository/          → Repository interface + PostgresRepo
+  │   ├── auth/                → JWT + argon2id + middleware
+  │   ├── ratelimit/           → Upstash Redis sliding window + middleware
+  │   ├── moderation/          → regex blocklist (LLM later)
+  │   ├── fanout/              → outbox processor goroutine
+  │   ├── handler/             → web + API + admin handlers
+  │   ├── router/              → route registration + middleware stacking
+  │   └── tmpl/                → template renderer + content negotiation
+  ├── web/
+  │   ├── templates/           → Go html/template + HTMX partials
+  │   └── static/              → CSS, vendored htmx.min.js
+  ├── agents/                  → Agent definitions + tool schemas (Phase 2)
+  ├── migrations/              → Postgres SQL migrations
+  ├── deploy/
+  │   └── Dockerfile           → multi-stage, scratch base
+  ├── Makefile
+  └── docker-compose.yml       → Local dev (Postgres via Docker)
 ```
 
 CI/CD:
@@ -372,15 +406,15 @@ CI/CD:
 ### Migration Path (Scale Phases)
 
 ```
-Phase 0: $0/mo     — Zero users. Everything sleeps. SQLite + Litestream.
-Phase 1: ~$12/mo   — Hundreds of users. SQLite does everything. Upstash for rate limiting.
-Phase 2: ~$50/mo   — Thousands. Migrate to Neon Postgres. Add timeline caching in Redis.
-Phase 3: ~$300/mo  — Tens of thousands. Add Upstash Kafka, Meilisearch on GCE. Sync moderation costs ramp.
+Phase 0: $0/mo     — Zero users. Everything sleeps. Neon Postgres free tier.
+Phase 1: ~$12/mo   — Hundreds of users. Postgres does everything. Upstash for rate limiting.
+Phase 2: ~$100/mo  — Thousands. Add timeline caching in Redis. Add Upstash Kafka.
+Phase 3: ~$300/mo  — Tens of thousands. Neon Pro. Meilisearch on GCE. Sync moderation costs ramp.
 Phase 4: ~$1K/mo   — Hundreds of thousands. Neon read replicas. Optimize moderation (better local model = fewer Haiku calls).
 Phase 5: ~$2K+/mo  — Millions. Dedicated infra for hot paths. Consider open-weight models for moderation to cut LLM costs.
 ```
 
-Each phase is a natural evolution, not a rewrite. The `Repository` interface means Phase 1→2 is a config change, not a refactor.
+Each phase is a natural evolution, not a rewrite. No database migration at any phase — Postgres scales with you.
 
 ---
 
@@ -388,33 +422,53 @@ Each phase is a natural evolution, not a rewrite. The `Repository` interface mea
 
 | Decision | Upside | Downside |
 |----------|--------|----------|
-| SQLite for Phase 0-1 | True $0, zero dependencies, open source | Single-writer, must migrate at ~1K users |
-| Neon for Phase 2+ | Serverless Postgres, scales to zero | Managed service, not fully self-hosted |
+| Neon Postgres from day one | $0 idle, multi-instance, no migration, tsvector search built-in | Managed service dependency |
+| Go + HTMX (not SPA) | No build step, fast cold starts, server-rendered, simple | Less interactive than React/Vue, requires full page concepts |
+| User profiles at `/u/{username}` | No route conflicts, clean URL namespace | Slightly less clean than `/{username}` |
+| CSRF tokens for web forms | Defense in depth for cookie-based auth | Small implementation overhead |
 | Upstash Redis from day one | $0 idle, needed for rate limiting | Managed service, vendor dependency |
 | Sync moderation in write path | No harmful content goes live | Adds ~200ms latency for ~5% of tweets (Haiku calls) |
-| Local ONNX classifier | Fast, free, reduces LLM calls by ~95% | Must train/maintain the model, risk of false positives |
+| Local regex/classifier before LLM | Fast, free, reduces LLM calls by ~95% | Must maintain blocklist, risk of false positives |
 | No Meilisearch until Phase 3 | Fewer services, less complexity | Postgres FTS is less feature-rich |
 | Agent action caps | Prevents runaway agent errors | Legitimate mass-actions get throttled |
-| Dead man's switch alerts to webhook | Catches total system failure | One human must monitor the webhook (but only for catastrophic failure) |
+| Dead man's switch for Auditor | Catches total system failure | One human must monitor the webhook (catastrophic failure only) |
 | Soft-delete only | Everything is reversible | Storage grows forever (mitigate with archival later) |
 
 ---
 
 ## Open Questions for Future Versions
 
-- [ ] **Frontend**: Go templates + HTMX (server-rendered, fast, simple) vs SPA (richer UX, more complexity)?
+- [x] **Frontend**: ~~Go templates + HTMX vs SPA~~ → Decided: Go templates + HTMX
 - [ ] **DMs**: Encrypted messaging or keep it public-only like early Twitter?
 - [ ] **Federation**: ActivityPub support to interop with Mastodon/Bluesky?
 - [ ] **Open-weight moderation**: Fine-tune Llama/Mistral for content classification to eliminate Haiku costs at scale?
 - [ ] **Multi-region**: Cloud Run multi-region with Neon read replicas?
 - [ ] **Revenue model**: If this costs ~$0-2K/mo to run, what's the business model?
 - [ ] **Media**: Photo/video uploads? Changes storage and moderation dramatically.
-- [ ] **The 1% problem**: Tweets held for async review — what's the user experience? "Your tweet is being reviewed" message? Or silent delay?
+- [ ] **The 1% problem**: Tweets held for async review — what's the UX? "Your tweet is being reviewed" or silent delay?
 
 ---
 ---
 
 ## Previous Versions
+
+### v0.3 — Hardened, Zero-Cost, Autonomous (SQLite + Litestream)
+
+Hardened v0.2 with honest cost model, sync moderation, async fan-out, infrastructure safety nets.
+
+#### Key Ideas (Retained in v0.4)
+- Sync moderation in write path, async fan-out via outbox, agent safety nets (Auditor, dead man's switch, action caps), Upstash Redis from day one, GCP observability, infrastructure circuit breakers.
+
+#### Why Superseded
+- SQLite + Litestream forces `max-instances=1` — not scalable
+- Litestream adds operational complexity (restore on cold start, async replication window)
+- SQLite → Postgres migration at ~1K users is a significant effort, not a config toggle
+- FTS5 → tsvector migration adds more work
+- No CSRF protection, no frontend decision, fragile route namespacing
+
+*Superseded by v0.4.*
+
+---
 
 ### v0.1 — Managed Services + One Part-Time Human
 

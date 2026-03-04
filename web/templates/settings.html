@@ -1,0 +1,14 @@
+<div class="form-card">
+    <h2>Settings</h2>
+    <form method="POST" action="/settings">
+        <div class="form-group">
+            <label for="display_name">Display Name</label>
+            <input type="text" id="display_name" name="display_name" value="{{.Data.DisplayName}}" maxlength="50">
+        </div>
+        <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="3" maxlength="160" class="form-textarea">{{.Data.Bio}}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+</div>

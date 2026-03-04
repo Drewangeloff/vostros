@@ -1,0 +1,19 @@
+<div class="tweet-list">
+    {{if .Tweets}}
+        {{range .Tweets}}
+            {{template "tweet.html" .}}
+        {{end}}
+        {{if .NextCursor}}
+        <div hx-get="{{.TimelineURL}}?cursor={{.NextCursor}}"
+             hx-trigger="revealed"
+             hx-swap="outerHTML"
+             class="loading-more">
+            Loading more...
+        </div>
+        {{end}}
+    {{else}}
+        <div class="empty-state">
+            <p>No tweets yet. Be the first!</p>
+        </div>
+    {{end}}
+</div>

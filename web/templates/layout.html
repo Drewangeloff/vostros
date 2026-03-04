@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - Old School Bird</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+    <div class="wrapper">
+        <header class="header">
+            <div class="container">
+                <a href="/" class="logo">Old School Bird</a>
+                <nav class="nav">
+                    <a href="/global">Global</a>
+                    {{if .User}}
+                        <a href="/timeline">Home</a>
+                        <a href="/search">Search</a>
+                        <a href="/u/{{.User.Username}}" class="nav-user">@{{.User.Username}}</a>
+                        <a href="/settings">Settings</a>
+                        <form method="POST" action="/logout" class="inline">
+                            <button type="submit" class="btn-link">Logout</button>
+                        </form>
+                    {{else}}
+                        <a href="/login">Login</a>
+                        <a href="/register">Sign Up</a>
+                    {{end}}
+                </nav>
+            </div>
+        </header>
+        <main class="container main">
+            {{.Content}}
+        </main>
+        <div class="toast-container" id="toast-container"></div>
+        <footer class="footer">
+            <div class="container">
+                <p>Old School Bird &mdash; like Twitter, circa 2009</p>
+            </div>
+        </footer>
+    </div>
+    <script>
+    // Character count
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('.tweet-compose textarea')) {
+            var len = e.target.value.length;
+            var counter = e.target.closest('.tweet-compose').querySelector('.char-count');
+            if (counter) {
+                counter.textContent = len + '/256';
+                counter.className = 'char-count' + (len > 236 ? (len > 256 ? ' over' : ' warn') : '');
+            }
+        }
+    });
+
+    // Toast notifications
+    function showToast(message, type) {
+        var container = document.getElementById('toast-container');
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'info');
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(function() { toast.remove(); }, 3000);
+    }
+
+    // Show flash message as toast on page load
+    {{if .Flash}}
+    showToast({{.Flash}}, {{.FlashType}});
+    {{end}}
+
+    // Listen for HX-Trigger toast events from HTMX responses
+    document.body.addEventListener('showToast', function(e) {
+        showToast(e.detail.message, e.detail.type || 'success');
+    });
+    </script>
+</body>
+</html>

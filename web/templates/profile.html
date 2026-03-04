@@ -1,0 +1,29 @@
+<div class="profile-header">
+    <div class="profile-info">
+        <div class="avatar-placeholder">
+            {{slice .Data.ProfileUser.Username 0 1}}
+        </div>
+        <div class="profile-details">
+            <div class="profile-name">
+                {{if .Data.ProfileUser.DisplayName}}{{.Data.ProfileUser.DisplayName}}{{else}}{{.Data.ProfileUser.Username}}{{end}}
+            </div>
+            <div class="profile-username">@{{.Data.ProfileUser.Username}}</div>
+            {{if .Data.ProfileUser.Bio}}<div class="profile-bio">{{.Data.ProfileUser.Bio}}</div>{{end}}
+            <div class="profile-stats">
+                <div class="profile-stat"><strong>{{.Data.Stats.TweetCount}}</strong> <span>Tweets</span></div>
+                <div class="profile-stat"><strong>{{.Data.Stats.FollowerCount}}</strong> <span>Followers</span></div>
+                <div class="profile-stat"><strong>{{.Data.Stats.FollowingCount}}</strong> <span>Following</span></div>
+            </div>
+            {{if and .User (not .Data.IsOwnProfile)}}
+            <div class="profile-actions">
+                {{template "follow_button.html" (map "Username" .Data.ProfileUser.Username "IsFollowing" .Data.IsFollowing)}}
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Tweets</h2>
+    {{template "tweet_list.html" (map "Tweets" .Data.Tweets "NextCursor" .NextCursor "TimelineURL" (print "/htmx/u/" .Data.ProfileUser.Username "/tweets"))}}
+</div>

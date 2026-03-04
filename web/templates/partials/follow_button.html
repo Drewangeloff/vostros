@@ -1,0 +1,13 @@
+{{if .IsFollowing}}
+<button class="btn btn-secondary btn-sm"
+        hx-delete="/follow/{{.Username}}"
+        hx-swap="outerHTML">
+    Unfollow
+</button>
+{{else}}
+<button class="btn btn-primary btn-sm"
+        hx-post="/follow/{{.Username}}"
+        hx-swap="outerHTML">
+    Follow
+</button>
+{{end}}

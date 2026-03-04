@@ -1,0 +1,5 @@
+<div class="page-timeline">
+    <h2>Home</h2>
+    {{template "tweet_form.html" .}}
+    {{template "tweet_list.html" (map "Tweets" .Data "NextCursor" .NextCursor "TimelineURL" "/htmx/timeline")}}
+</div>
