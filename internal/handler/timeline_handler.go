@@ -34,6 +34,10 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Timeline(w http.ResponseWriter, r *http.Request) {
 	user := ctxutil.GetUser(r.Context())
 	if user == nil {
+		if tmpl.WantsJSON(r) {
+			h.jsonError(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
