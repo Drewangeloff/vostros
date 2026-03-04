@@ -162,8 +162,8 @@ a:hover { text-decoration: underline; }
     color: var(--gray-700);
 }
 
-/* Tweet */
-.tweet {
+/* Post */
+.post {
     display: flex;
     gap: 12px;
     padding: 12px 16px;
@@ -172,11 +172,11 @@ a:hover { text-decoration: underline; }
     position: relative;
 }
 
-.tweet:first-child { border-radius: 12px 12px 0 0; }
-.tweet:last-child { border-radius: 0 0 12px 12px; border-bottom: none; }
-.tweet:only-child { border-radius: 12px; }
+.post:first-child { border-radius: 12px 12px 0 0; }
+.post:last-child { border-radius: 0 0 12px 12px; border-bottom: none; }
+.post:only-child { border-radius: 12px; }
 
-.tweet-avatar img,
+.post-avatar img,
 .avatar-placeholder {
     width: 40px;
     height: 40px;
@@ -196,47 +196,47 @@ a:hover { text-decoration: underline; }
     text-transform: uppercase;
 }
 
-.tweet-body { flex: 1; min-width: 0; }
+.post-body { flex: 1; min-width: 0; }
 
-.tweet-header {
+.post-header {
     display: flex;
     align-items: baseline;
     gap: 4px;
     flex-wrap: wrap;
 }
 
-.tweet-displayname {
+.post-displayname {
     font-weight: 700;
     color: var(--gray-900);
 }
-.tweet-displayname:hover { text-decoration: underline; }
+.post-displayname:hover { text-decoration: underline; }
 
-.tweet-username {
+.post-username {
     color: var(--gray-500);
     font-size: 13px;
 }
 
-.tweet-time {
+.post-time {
     color: var(--gray-500);
     font-size: 13px;
 }
-.tweet-time::before { content: "\00b7"; margin: 0 4px; }
+.post-time::before { content: "\00b7"; margin: 0 4px; }
 
-.tweet-content {
+.post-content {
     margin-top: 4px;
     word-wrap: break-word;
     white-space: pre-wrap;
 }
 
-.tweet-actions {
+.post-actions {
     display: flex;
     gap: 8px;
     margin-top: 8px;
     align-items: center;
 }
 
-/* Tweet compose */
-.tweet-compose {
+/* Post compose */
+.post-compose {
     background: var(--white);
     border-radius: 12px;
     padding: 16px;
@@ -245,11 +245,11 @@ a:hover { text-decoration: underline; }
     transition: border-color 0.15s;
 }
 
-.tweet-compose:focus-within {
+.post-compose:focus-within {
     border-color: var(--blue);
 }
 
-.tweet-compose textarea {
+.post-compose textarea {
     width: 100%;
     border: none;
     resize: none;
@@ -260,7 +260,7 @@ a:hover { text-decoration: underline; }
     line-height: 1.4;
 }
 
-.tweet-compose-footer {
+.post-compose-footer {
     display: flex;
     justify-content: flex-end;
     align-items: center;
@@ -277,8 +277,8 @@ a:hover { text-decoration: underline; }
 .char-count.warn { color: #F5A623; }
 .char-count.over { color: var(--red); font-weight: 700; }
 
-/* Tweet list */
-.tweet-list {
+/* Post list */
+.post-list {
     border-radius: 12px;
     overflow: hidden;
 }
@@ -590,19 +590,19 @@ a:hover { text-decoration: underline; }
         font-size: 22px;
     }
 
-    .tweet {
+    .post {
         padding: 10px 12px;
         gap: 10px;
     }
 
-    .tweet-avatar img,
+    .post-avatar img,
     .avatar-placeholder {
         width: 36px;
         height: 36px;
         font-size: 14px;
     }
 
-    .tweet-compose textarea {
+    .post-compose textarea {
         font-size: 15px;
     }
 

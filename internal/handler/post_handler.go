@@ -12,7 +12,7 @@ import (
 	"github.com/drewangeloff/vostros/internal/tmpl"
 )
 
-func (h *Handler) PostTweet(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	user := ctxutil.GetUser(r.Context())
 	if user == nil {
 		if tmpl.WantsJSON(r) {
@@ -64,7 +64,7 @@ func (h *Handler) PostTweet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tweet := &model.Tweet{
+	post := &model.Post{
 		ID:        auth.NewULID(),
 		UserID:    user.ID,
 		Content:   content,
@@ -73,11 +73,11 @@ func (h *Handler) PostTweet(w http.ResponseWriter, r *http.Request) {
 		User:      user,
 	}
 
-	if err := h.Repo.CreateTweetWithOutbox(r.Context(), tweet); err != nil {
+	if err := h.Repo.CreatePostWithOutbox(r.Context(), post); err != nil {
 		if tmpl.WantsJSON(r) {
-			h.jsonError(w, "failed to create tweet", http.StatusInternalServerError)
+			h.jsonError(w, "failed to create post", http.StatusInternalServerError)
 		} else {
-			http.Error(w, "failed to create tweet", http.StatusInternalServerError)
+			http.Error(w, "failed to create post", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -85,16 +85,16 @@ func (h *Handler) PostTweet(w http.ResponseWriter, r *http.Request) {
 	if tmpl.WantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(tweet)
+		json.NewEncoder(w).Encode(post)
 		return
 	}
 
-	// HTMX: return the tweet partial to prepend
-	tweet.CanDelete = true
-	h.Renderer.RenderPartial(w, r, "tweet.html", tweet)
+	// HTMX: return the post partial to prepend
+	post.CanDelete = true
+	h.Renderer.RenderPartial(w, r, "post.html", post)
 }
 
-func (h *Handler) DeleteTweet(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	user := ctxutil.GetUser(r.Context())
 	if user == nil {
 		if tmpl.WantsJSON(r) {
@@ -105,19 +105,19 @@ func (h *Handler) DeleteTweet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tweetID := r.PathValue("id")
-	tweet, err := h.Repo.GetTweetByID(r.Context(), tweetID)
-	if err != nil || tweet == nil {
+	postID := r.PathValue("id")
+	post, err := h.Repo.GetPostByID(r.Context(), postID)
+	if err != nil || post == nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	if tweet.UserID != user.ID && user.Role != "admin" {
+	if post.UserID != user.ID && user.Role != "admin" {
 		h.jsonError(w, "forbidden", http.StatusForbidden)
 		return
 	}
 
-	if err := h.Repo.DeleteTweet(r.Context(), tweetID); err != nil {
+	if err := h.Repo.DeletePost(r.Context(), postID); err != nil {
 		h.jsonError(w, "failed to delete", http.StatusInternalServerError)
 		return
 	}
@@ -127,18 +127,17 @@ func (h *Handler) DeleteTweet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// HTMX: return empty to remove the tweet from DOM
 	w.Header().Set("HX-Trigger", `{"showToast":{"message":"Post deleted","type":"success"}}`)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) GetTweet(w http.ResponseWriter, r *http.Request) {
-	tweetID := r.PathValue("id")
-	tweet, err := h.Repo.GetTweetByID(r.Context(), tweetID)
-	if err != nil || tweet == nil || tweet.Status != "visible" {
+func (h *Handler) GetPost(w http.ResponseWriter, r *http.Request) {
+	postID := r.PathValue("id")
+	post, err := h.Repo.GetPostByID(r.Context(), postID)
+	if err != nil || post == nil || post.Status != "visible" {
 		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tweet)
+	json.NewEncoder(w).Encode(post)
 }

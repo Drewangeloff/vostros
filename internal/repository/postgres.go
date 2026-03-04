@@ -111,16 +111,16 @@ func (r *PostgresRepo) UpdateUserRole(ctx context.Context, userID string, role s
 func (r *PostgresRepo) GetUserStats(ctx context.Context, userID string) (*model.UserStats, error) {
 	s := &model.UserStats{}
 	err := r.pool.QueryRow(ctx, `SELECT user_id, follower_count, following_count, tweet_count FROM user_stats WHERE user_id = $1`, userID).
-		Scan(&s.UserID, &s.FollowerCount, &s.FollowingCount, &s.TweetCount)
+		Scan(&s.UserID, &s.FollowerCount, &s.FollowingCount, &s.PostCount)
 	if err == pgx.ErrNoRows {
 		return &model.UserStats{UserID: userID}, nil
 	}
 	return s, err
 }
 
-// --- Tweets ---
+// --- Posts ---
 
-func (r *PostgresRepo) CreateTweetWithOutbox(ctx context.Context, tweet *model.Tweet) error {
+func (r *PostgresRepo) CreatePostWithOutbox(ctx context.Context, post *model.Post) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -130,15 +130,15 @@ func (r *PostgresRepo) CreateTweetWithOutbox(ctx context.Context, tweet *model.T
 	_, err = tx.Exec(ctx, `
 		INSERT INTO tweets (id, user_id, content, status, created_at)
 		VALUES ($1, $2, $3, $4, $5)
-	`, tweet.ID, tweet.UserID, tweet.Content, tweet.Status, tweet.CreatedAt)
+	`, post.ID, post.UserID, post.Content, post.Status, post.CreatedAt)
 	if err != nil {
 		return err
 	}
 
 	payload, _ := json.Marshal(map[string]string{
-		"tweet_id":   tweet.ID,
-		"user_id":    tweet.UserID,
-		"created_at": tweet.CreatedAt.Format(time.RFC3339Nano),
+		"tweet_id":   post.ID,
+		"user_id":    post.UserID,
+		"created_at": post.CreatedAt.Format(time.RFC3339Nano),
 	})
 	_, err = tx.Exec(ctx, `
 		INSERT INTO outbox (event_type, payload) VALUES ('tweet_created', $1)
@@ -149,7 +149,7 @@ func (r *PostgresRepo) CreateTweetWithOutbox(ctx context.Context, tweet *model.T
 
 	_, err = tx.Exec(ctx, `
 		UPDATE user_stats SET tweet_count = tweet_count + 1 WHERE user_id = $1
-	`, tweet.UserID)
+	`, post.UserID)
 	if err != nil {
 		return err
 	}
@@ -157,8 +157,8 @@ func (r *PostgresRepo) CreateTweetWithOutbox(ctx context.Context, tweet *model.T
 	return tx.Commit(ctx)
 }
 
-func (r *PostgresRepo) GetTweetByID(ctx context.Context, id string) (*model.Tweet, error) {
-	t := &model.Tweet{User: &model.User{}}
+func (r *PostgresRepo) GetPostByID(ctx context.Context, id string) (*model.Post, error) {
+	t := &model.Post{User: &model.User{}}
 	err := r.pool.QueryRow(ctx, `
 		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
 		       u.id, u.username, u.display_name, u.avatar_url
@@ -172,27 +172,24 @@ func (r *PostgresRepo) GetTweetByID(ctx context.Context, id string) (*model.Twee
 	return t, err
 }
 
-func (r *PostgresRepo) DeleteTweet(ctx context.Context, id string) error {
+func (r *PostgresRepo) DeletePost(ctx context.Context, id string) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	// Get user_id before soft-deleting
 	var userID string
 	err = tx.QueryRow(ctx, `UPDATE tweets SET status = 'deleted' WHERE id = $1 AND status = 'visible' RETURNING user_id`, id).Scan(&userID)
 	if err != nil {
 		return err
 	}
 
-	// Decrement tweet count
 	_, err = tx.Exec(ctx, `UPDATE user_stats SET tweet_count = GREATEST(tweet_count - 1, 0) WHERE user_id = $1`, userID)
 	if err != nil {
 		return err
 	}
 
-	// Create outbox event for timeline cleanup
 	payload, _ := json.Marshal(map[string]string{"tweet_id": id})
 	_, err = tx.Exec(ctx, `INSERT INTO outbox (event_type, payload) VALUES ('tweet_deleted', $1)`, payload)
 	if err != nil {
@@ -202,12 +199,12 @@ func (r *PostgresRepo) DeleteTweet(ctx context.Context, id string) error {
 	return tx.Commit(ctx)
 }
 
-func (r *PostgresRepo) UpdateTweetStatus(ctx context.Context, id string, status string) error {
+func (r *PostgresRepo) UpdatePostStatus(ctx context.Context, id string, status string) error {
 	_, err := r.pool.Exec(ctx, `UPDATE tweets SET status = $1 WHERE id = $2`, status, id)
 	return err
 }
 
-func (r *PostgresRepo) GetTweetsByUserID(ctx context.Context, userID string, cursor string, limit int) ([]*model.Tweet, string, error) {
+func (r *PostgresRepo) GetPostsByUserID(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error) {
 	query := `
 		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
 		       u.id, u.username, u.display_name, u.avatar_url
@@ -222,12 +219,12 @@ func (r *PostgresRepo) GetTweetsByUserID(ctx context.Context, userID string, cur
 		args = append(args, limit)
 	}
 	query += ` ORDER BY t.id DESC LIMIT $2`
-	return r.scanTweets(ctx, query, args...)
+	return r.scanPosts(ctx, query, args...)
 }
 
 // --- Timeline ---
 
-func (r *PostgresRepo) GetGlobalTimeline(ctx context.Context, cursor string, limit int) ([]*model.Tweet, string, error) {
+func (r *PostgresRepo) GetGlobalTimeline(ctx context.Context, cursor string, limit int) ([]*model.Post, string, error) {
 	query := `
 		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
 		       u.id, u.username, u.display_name, u.avatar_url
@@ -242,10 +239,10 @@ func (r *PostgresRepo) GetGlobalTimeline(ctx context.Context, cursor string, lim
 		args = append(args, limit)
 	}
 	query += ` ORDER BY t.id DESC LIMIT $1`
-	return r.scanTweets(ctx, query, args...)
+	return r.scanPosts(ctx, query, args...)
 }
 
-func (r *PostgresRepo) GetHomeTimeline(ctx context.Context, userID string, cursor string, limit int) ([]*model.Tweet, string, error) {
+func (r *PostgresRepo) GetHomeTimeline(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error) {
 	query := `
 		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
 		       u.id, u.username, u.display_name, u.avatar_url
@@ -262,16 +259,16 @@ func (r *PostgresRepo) GetHomeTimeline(ctx context.Context, userID string, curso
 		args = append(args, limit)
 	}
 	query += ` ORDER BY t.id DESC LIMIT $2`
-	return r.scanTweets(ctx, query, args...)
+	return r.scanPosts(ctx, query, args...)
 }
 
-func (r *PostgresRepo) InsertTimelineEntries(ctx context.Context, userIDs []string, tweetID string, createdAt time.Time) error {
+func (r *PostgresRepo) InsertTimelineEntries(ctx context.Context, userIDs []string, postID string, createdAt time.Time) error {
 	if len(userIDs) == 0 {
 		return nil
 	}
 	batch := &pgx.Batch{}
 	for _, uid := range userIDs {
-		batch.Queue(`INSERT INTO timeline_entries (user_id, tweet_id, created_at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, uid, tweetID, createdAt)
+		batch.Queue(`INSERT INTO timeline_entries (user_id, tweet_id, created_at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, uid, postID, createdAt)
 	}
 	br := r.pool.SendBatch(ctx, batch)
 	defer br.Close()
@@ -283,8 +280,8 @@ func (r *PostgresRepo) InsertTimelineEntries(ctx context.Context, userIDs []stri
 	return nil
 }
 
-func (r *PostgresRepo) DeleteTimelineEntries(ctx context.Context, tweetID string) error {
-	_, err := r.pool.Exec(ctx, `DELETE FROM timeline_entries WHERE tweet_id = $1`, tweetID)
+func (r *PostgresRepo) DeleteTimelineEntries(ctx context.Context, postID string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM timeline_entries WHERE tweet_id = $1`, postID)
 	return err
 }
 
@@ -400,7 +397,7 @@ func (r *PostgresRepo) GetFollowerIDs(ctx context.Context, userID string) ([]str
 
 // --- Search ---
 
-func (r *PostgresRepo) SearchTweets(ctx context.Context, query string, cursor string, limit int) ([]*model.Tweet, string, error) {
+func (r *PostgresRepo) SearchPosts(ctx context.Context, query string, cursor string, limit int) ([]*model.Post, string, error) {
 	sql := `
 		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
 		       u.id, u.username, u.display_name, u.avatar_url
@@ -415,7 +412,7 @@ func (r *PostgresRepo) SearchTweets(ctx context.Context, query string, cursor st
 		args = append(args, limit)
 	}
 	sql += ` ORDER BY t.id DESC LIMIT $2`
-	return r.scanTweets(ctx, sql, args...)
+	return r.scanPosts(ctx, sql, args...)
 }
 
 // --- Outbox ---
@@ -575,28 +572,28 @@ func (r *PostgresRepo) GetAgentActions(ctx context.Context, since time.Time, lim
 
 // --- Helpers ---
 
-func (r *PostgresRepo) scanTweets(ctx context.Context, query string, args ...any) ([]*model.Tweet, string, error) {
+func (r *PostgresRepo) scanPosts(ctx context.Context, query string, args ...any) ([]*model.Post, string, error) {
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
 
-	var tweets []*model.Tweet
+	var posts []*model.Post
 	var nextCursor string
 	for rows.Next() {
-		t := &model.Tweet{User: &model.User{}}
+		t := &model.Post{User: &model.User{}}
 		if err := rows.Scan(&t.ID, &t.UserID, &t.Content, &t.Status, &t.CreatedAt,
 			&t.User.ID, &t.User.Username, &t.User.DisplayName, &t.User.AvatarURL); err != nil {
 			return nil, "", err
 		}
-		tweets = append(tweets, t)
+		posts = append(posts, t)
 		nextCursor = t.ID
 	}
 	if err := rows.Err(); err != nil {
-		return nil, "", fmt.Errorf("scanning tweets: %w", err)
+		return nil, "", fmt.Errorf("scanning posts: %w", err)
 	}
-	return tweets, nextCursor, nil
+	return posts, nextCursor, nil
 }
 
 func (r *PostgresRepo) scanUsers(ctx context.Context, query string, args ...any) ([]*model.User, string, error) {

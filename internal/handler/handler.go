@@ -31,13 +31,13 @@ func (h *Handler) jsonError(w http.ResponseWriter, msg string, code int) {
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
-func markDeletable(tweets []*model.Tweet, user *model.User) {
+func markDeletable(posts []*model.Post, user *model.User) {
 	if user == nil {
 		return
 	}
-	for _, t := range tweets {
-		if t.UserID == user.ID || user.Role == "admin" {
-			t.CanDelete = true
+	for _, p := range posts {
+		if p.UserID == user.ID || user.Role == "admin" {
+			p.CanDelete = true
 		}
 	}
 }

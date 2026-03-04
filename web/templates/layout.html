@@ -43,9 +43,9 @@
     <script>
     // Character count
     document.addEventListener('input', function(e) {
-        if (e.target.matches('.tweet-compose textarea')) {
+        if (e.target.matches('.post-compose textarea')) {
             var len = e.target.value.length;
-            var counter = e.target.closest('.tweet-compose').querySelector('.char-count');
+            var counter = e.target.closest('.post-compose').querySelector('.char-count');
             if (counter) {
                 counter.textContent = len + '/256';
                 counter.className = 'char-count' + (len > 236 ? (len > 256 ? ' over' : ' warn') : '');

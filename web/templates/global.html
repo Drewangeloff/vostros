@@ -1,7 +1,7 @@
 <div class="page-timeline">
     <h2>Global Timeline</h2>
     {{if .User}}
-    {{template "tweet_form.html" .}}
+    {{template "post_form.html" .}}
     {{end}}
-    {{template "tweet_list.html" (map "Tweets" .Data "NextCursor" .NextCursor "TimelineURL" "/htmx/global")}}
+    {{template "post_list.html" (map "Posts" .Data "NextCursor" .NextCursor "TimelineURL" "/htmx/global")}}
 </div>

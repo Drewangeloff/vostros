@@ -1,6 +1,6 @@
-<form class="tweet-compose"
-      hx-post="/tweet"
-      hx-target=".tweet-list"
+<form class="post-compose"
+      hx-post="/post"
+      hx-target=".post-list"
       hx-swap="afterbegin"
       hx-on::after-request="if(event.detail.successful) { this.reset(); this.querySelector('.char-count').textContent=''; }">
     <textarea name="content"
@@ -8,7 +8,7 @@
               maxlength="256"
               rows="3"
               required></textarea>
-    <div class="tweet-compose-footer">
+    <div class="post-compose-footer">
         <span class="char-count"></span>
         <button type="submit" class="btn btn-primary btn-sm">Post</button>
     </div>

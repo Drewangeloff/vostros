@@ -42,9 +42,9 @@ func (p *OutboxProcessor) processBatch(ctx context.Context) {
 	for _, event := range events {
 		switch event.EventType {
 		case "tweet_created":
-			p.handleTweetCreated(ctx, event.ID, event.Payload)
+			p.handlePostCreated(ctx, event.ID, event.Payload)
 		case "tweet_deleted":
-			p.handleTweetDeleted(ctx, event.ID, event.Payload)
+			p.handlePostDeleted(ctx, event.ID, event.Payload)
 		default:
 			log.Printf("outbox: unknown event type: %s", event.EventType)
 			if err := p.repo.CompleteOutboxEvent(ctx, event.ID); err != nil {
@@ -54,21 +54,21 @@ func (p *OutboxProcessor) processBatch(ctx context.Context) {
 	}
 }
 
-func (p *OutboxProcessor) handleTweetCreated(ctx context.Context, eventID int64, payload string) {
+func (p *OutboxProcessor) handlePostCreated(ctx context.Context, eventID int64, payload string) {
 	var data struct {
-		TweetID   string `json:"tweet_id"`
+		PostID    string `json:"tweet_id"`
 		UserID    string `json:"user_id"`
 		CreatedAt string `json:"created_at"`
 	}
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
-		log.Printf("outbox: invalid payload for tweet_created: %v", err)
+		log.Printf("outbox: invalid payload for post created: %v", err)
 		p.repo.FailOutboxEvent(ctx, eventID)
 		return
 	}
 
 	createdAt, err := time.Parse(time.RFC3339Nano, data.CreatedAt)
 	if err != nil {
-		log.Printf("outbox: invalid created_at in tweet_created payload: %v", err)
+		log.Printf("outbox: invalid created_at in post created payload: %v", err)
 		p.repo.FailOutboxEvent(ctx, eventID)
 		return
 	}
@@ -81,7 +81,7 @@ func (p *OutboxProcessor) handleTweetCreated(ctx context.Context, eventID int64,
 	}
 
 	if len(followerIDs) > 0 {
-		if err := p.repo.InsertTimelineEntries(ctx, followerIDs, data.TweetID, createdAt); err != nil {
+		if err := p.repo.InsertTimelineEntries(ctx, followerIDs, data.PostID, createdAt); err != nil {
 			log.Printf("outbox: error inserting timeline entries: %v", err)
 			p.repo.FailOutboxEvent(ctx, eventID)
 			return
@@ -93,18 +93,18 @@ func (p *OutboxProcessor) handleTweetCreated(ctx context.Context, eventID int64,
 	}
 }
 
-func (p *OutboxProcessor) handleTweetDeleted(ctx context.Context, eventID int64, payload string) {
+func (p *OutboxProcessor) handlePostDeleted(ctx context.Context, eventID int64, payload string) {
 	var data struct {
-		TweetID string `json:"tweet_id"`
+		PostID string `json:"tweet_id"`
 	}
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
-		log.Printf("outbox: invalid payload for tweet_deleted: %v", err)
+		log.Printf("outbox: invalid payload for post deleted: %v", err)
 		p.repo.FailOutboxEvent(ctx, eventID)
 		return
 	}
 
-	if err := p.repo.DeleteTimelineEntries(ctx, data.TweetID); err != nil {
-		log.Printf("outbox: error deleting timeline entries for tweet %s: %v", data.TweetID, err)
+	if err := p.repo.DeleteTimelineEntries(ctx, data.PostID); err != nil {
+		log.Printf("outbox: error deleting timeline entries for post %s: %v", data.PostID, err)
 		p.repo.FailOutboxEvent(ctx, eventID)
 		return
 	}

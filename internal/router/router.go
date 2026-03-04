@@ -53,9 +53,9 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	mux.HandleFunc("GET /search", h.Search)
 	mux.HandleFunc("GET /u/{username}", h.Profile)
 
-	// Tweet actions (require auth)
-	mux.Handle("POST /tweet", requireAuth(h.PostTweet))
-	mux.Handle("DELETE /tweet/{id}", requireAuth(h.DeleteTweet))
+	// Post actions (require auth)
+	mux.Handle("POST /post", requireAuth(h.CreatePost))
+	mux.Handle("DELETE /post/{id}", requireAuth(h.DeletePost))
 
 	// Follow actions (require auth)
 	mux.Handle("POST /follow/{username}", requireAuth(h.Follow))
@@ -65,7 +65,7 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	mux.HandleFunc("GET /htmx/timeline", h.HTMXTimeline)
 	mux.HandleFunc("GET /htmx/global", h.HTMXGlobal)
 	mux.HandleFunc("GET /htmx/search", h.HTMXSearch)
-	mux.HandleFunc("GET /htmx/u/{username}/tweets", h.HTMXUserTweets)
+	mux.HandleFunc("GET /htmx/u/{username}/posts", h.HTMXUserPosts)
 
 	// JSON API - Auth (unauthenticated)
 	mux.HandleFunc("POST /api/v1/auth/register", h.Register)
@@ -77,10 +77,10 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	mux.HandleFunc("GET /api/v1/timeline", h.Timeline)
 	mux.HandleFunc("GET /api/v1/global", h.Global)
 
-	// JSON API - Tweets (mutations require auth)
-	mux.Handle("POST /api/v1/tweets", requireAuth(h.PostTweet))
-	mux.HandleFunc("GET /api/v1/tweets/{id}", h.GetTweet)
-	mux.Handle("DELETE /api/v1/tweets/{id}", requireAuth(h.DeleteTweet))
+	// JSON API - Posts (mutations require auth)
+	mux.Handle("POST /api/v1/posts", requireAuth(h.CreatePost))
+	mux.HandleFunc("GET /api/v1/posts/{id}", h.GetPost)
+	mux.Handle("DELETE /api/v1/posts/{id}", requireAuth(h.DeletePost))
 
 	// JSON API - Users
 	mux.HandleFunc("GET /api/v1/users/{username}", h.Profile)

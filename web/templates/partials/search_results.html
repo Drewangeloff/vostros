@@ -14,8 +14,8 @@
 </div>
 {{end}}
 
-{{if .Tweets}}
+{{if .Posts}}
 <h3 class="results-heading">Posts</h3>
 {{end}}
 
-{{template "tweet_list.html" (map "Tweets" .Tweets "NextCursor" .NextCursor "TimelineURL" .TimelineURL)}}
+{{template "post_list.html" (map "Posts" .Posts "NextCursor" .NextCursor "TimelineURL" .TimelineURL)}}

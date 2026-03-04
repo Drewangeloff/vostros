@@ -15,7 +15,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	cursor := r.URL.Query().Get("cursor")
 	user := ctxutil.GetUser(r.Context())
 
-	results, nextCursor, err := h.Repo.SearchTweets(r.Context(), query, cursor, 20)
+	results, nextCursor, err := h.Repo.SearchPosts(r.Context(), query, cursor, 20)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -38,8 +38,8 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	if tmpl.WantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"tweets": results,
-			"users":  users,
+			"posts": results,
+			"users": users,
 		})
 		return
 	}
@@ -68,12 +68,12 @@ func (h *Handler) HTMXSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tweets, nextCursor, err := h.Repo.SearchTweets(r.Context(), query, cursor, 20)
+	posts, nextCursor, err := h.Repo.SearchPosts(r.Context(), query, cursor, 20)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	markDeletable(tweets, user)
+	markDeletable(posts, user)
 
 	// On first search (no cursor), also search users
 	var foundUsers interface{}
@@ -88,7 +88,7 @@ func (h *Handler) HTMXSearch(w http.ResponseWriter, r *http.Request) {
 
 	h.Renderer.RenderPartial(w, r, "search_results.html", map[string]any{
 		"Query":       query,
-		"Tweets":      tweets,
+		"Posts":       posts,
 		"Users":       foundUsers,
 		"NextCursor":  nextCursor,
 		"TimelineURL": "/htmx/search?q=" + url.QueryEscape(query),

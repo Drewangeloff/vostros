@@ -9,7 +9,7 @@ func TestRegexModerator_BlocksSlurs(t *testing.T) {
 		blocked bool
 	}{
 		{"hello world", false},
-		{"great tweet", false},
+		{"great post", false},
 		{"you should kys now", true},
 		{"KYS", true},
 		{"kill yourself please", true},

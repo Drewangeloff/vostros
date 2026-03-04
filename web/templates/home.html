@@ -9,6 +9,6 @@
     </div>
     <div class="section">
         <h2>Global Timeline</h2>
-        {{template "tweet_list.html" (map "Tweets" .Data "NextCursor" .NextCursor "TimelineURL" "/htmx/global")}}
+        {{template "post_list.html" (map "Posts" .Data "NextCursor" .NextCursor "TimelineURL" "/htmx/global")}}
     </div>
 </div>

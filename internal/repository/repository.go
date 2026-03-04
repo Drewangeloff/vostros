@@ -20,18 +20,18 @@ type Repository interface {
 	// User Stats
 	GetUserStats(ctx context.Context, userID string) (*model.UserStats, error)
 
-	// Tweets
-	CreateTweetWithOutbox(ctx context.Context, tweet *model.Tweet) error
-	GetTweetByID(ctx context.Context, id string) (*model.Tweet, error)
-	DeleteTweet(ctx context.Context, id string) error
-	UpdateTweetStatus(ctx context.Context, id string, status string) error
-	GetTweetsByUserID(ctx context.Context, userID string, cursor string, limit int) ([]*model.Tweet, string, error)
+	// Posts
+	CreatePostWithOutbox(ctx context.Context, post *model.Post) error
+	GetPostByID(ctx context.Context, id string) (*model.Post, error)
+	DeletePost(ctx context.Context, id string) error
+	UpdatePostStatus(ctx context.Context, id string, status string) error
+	GetPostsByUserID(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error)
 
 	// Timeline
-	GetHomeTimeline(ctx context.Context, userID string, cursor string, limit int) ([]*model.Tweet, string, error)
-	GetGlobalTimeline(ctx context.Context, cursor string, limit int) ([]*model.Tweet, string, error)
-	InsertTimelineEntries(ctx context.Context, userIDs []string, tweetID string, createdAt time.Time) error
-	DeleteTimelineEntries(ctx context.Context, tweetID string) error
+	GetHomeTimeline(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error)
+	GetGlobalTimeline(ctx context.Context, cursor string, limit int) ([]*model.Post, string, error)
+	InsertTimelineEntries(ctx context.Context, userIDs []string, postID string, createdAt time.Time) error
+	DeleteTimelineEntries(ctx context.Context, postID string) error
 
 	// Follows
 	Follow(ctx context.Context, followerID, followingID string) error
@@ -42,7 +42,7 @@ type Repository interface {
 	GetFollowerIDs(ctx context.Context, userID string) ([]string, error)
 
 	// Search
-	SearchTweets(ctx context.Context, query string, cursor string, limit int) ([]*model.Tweet, string, error)
+	SearchPosts(ctx context.Context, query string, cursor string, limit int) ([]*model.Post, string, error)
 
 	// Outbox
 	ClaimOutboxEvents(ctx context.Context, batchSize int) ([]*model.OutboxEvent, error)

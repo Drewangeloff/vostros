@@ -1,25 +1,25 @@
-<div class="tweet" id="tweet-{{.ID}}">
-    <div class="tweet-avatar">
+<div class="post" id="post-{{.ID}}">
+    <div class="post-avatar">
         {{if .User.AvatarURL}}
         <img src="{{.User.AvatarURL}}" alt="{{.User.Username}}">
         {{else}}
         <div class="avatar-placeholder">{{slice .User.Username 0 1}}</div>
         {{end}}
     </div>
-    <div class="tweet-body">
-        <div class="tweet-header">
-            <a href="/u/{{.User.Username}}" class="tweet-displayname">
+    <div class="post-body">
+        <div class="post-header">
+            <a href="/u/{{.User.Username}}" class="post-displayname">
                 {{if .User.DisplayName}}{{.User.DisplayName}}{{else}}{{.User.Username}}{{end}}
             </a>
-            <a href="/u/{{.User.Username}}" class="tweet-username">@{{.User.Username}}</a>
-            <span class="tweet-time">{{timeago .CreatedAt}}</span>
+            <a href="/u/{{.User.Username}}" class="post-username">@{{.User.Username}}</a>
+            <span class="post-time">{{timeago .CreatedAt}}</span>
         </div>
-        <div class="tweet-content">{{.Content}}</div>
-        <div class="tweet-actions">
+        <div class="post-content">{{.Content}}</div>
+        <div class="post-actions">
             {{if .CanDelete}}
             <button class="btn btn-danger btn-sm"
-                    hx-delete="/tweet/{{.ID}}"
-                    hx-target="#tweet-{{.ID}}"
+                    hx-delete="/post/{{.ID}}"
+                    hx-target="#post-{{.ID}}"
                     hx-swap="outerHTML"
                     hx-confirm="Delete this post?">Delete</button>
             {{end}}

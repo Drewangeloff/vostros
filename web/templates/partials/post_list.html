@@ -1,7 +1,7 @@
-<div class="tweet-list">
-    {{if .Tweets}}
-        {{range .Tweets}}
-            {{template "tweet.html" .}}
+<div class="post-list">
+    {{if .Posts}}
+        {{range .Posts}}
+            {{template "post.html" .}}
         {{end}}
         {{if .NextCursor}}
         <div hx-get="{{.TimelineURL}}?cursor={{.NextCursor}}"

@@ -21,14 +21,14 @@ func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	tweets, cursor, err := h.Repo.GetTweetsByUserID(r.Context(), profileUser.ID, r.URL.Query().Get("cursor"), 20)
+	posts, cursor, err := h.Repo.GetPostsByUserID(r.Context(), profileUser.ID, r.URL.Query().Get("cursor"), 20)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	currentUser := ctxutil.GetUser(r.Context())
-	markDeletable(tweets, currentUser)
+	markDeletable(posts, currentUser)
 	var isFollowing bool
 	if currentUser != nil && currentUser.ID != profileUser.ID {
 		isFollowing, err = h.Repo.IsFollowing(r.Context(), currentUser.ID, profileUser.ID)
@@ -39,11 +39,11 @@ func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]any{
-		"ProfileUser": profileUser,
-		"Stats":       stats,
-		"Tweets":      tweets,
-		"NextCursor":  cursor,
-		"IsFollowing": isFollowing,
+		"ProfileUser":  profileUser,
+		"Stats":        stats,
+		"Posts":        posts,
+		"NextCursor":   cursor,
+		"IsFollowing":  isFollowing,
 		"IsOwnProfile": currentUser != nil && currentUser.ID == profileUser.ID,
 	}
 
@@ -147,7 +147,7 @@ func (h *Handler) Unfollow(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) HTMXUserTweets(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HTMXUserPosts(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
 	profileUser, err := h.Repo.GetUserByUsername(r.Context(), username)
 	if err != nil || profileUser == nil {
@@ -156,15 +156,15 @@ func (h *Handler) HTMXUserTweets(w http.ResponseWriter, r *http.Request) {
 	}
 	currentUser := ctxutil.GetUser(r.Context())
 	cursor := r.URL.Query().Get("cursor")
-	tweets, nextCursor, err := h.Repo.GetTweetsByUserID(r.Context(), profileUser.ID, cursor, 20)
+	posts, nextCursor, err := h.Repo.GetPostsByUserID(r.Context(), profileUser.ID, cursor, 20)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	markDeletable(tweets, currentUser)
-	h.Renderer.RenderPartial(w, r, "tweet_list.html", map[string]any{
-		"Tweets":      tweets,
+	markDeletable(posts, currentUser)
+	h.Renderer.RenderPartial(w, r, "post_list.html", map[string]any{
+		"Posts":       posts,
 		"NextCursor":  nextCursor,
-		"TimelineURL": "/htmx/u/" + username + "/tweets",
+		"TimelineURL": "/htmx/u/" + username + "/posts",
 	})
 }

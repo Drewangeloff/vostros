@@ -13,7 +13,7 @@
 
 <div id="search-results">
     {{if .Data.Query}}
-        {{template "search_results.html" (map "Query" .Data.Query "Tweets" .Data.Results "Users" .Data.Users "NextCursor" .NextCursor "TimelineURL" (print "/htmx/search?q=" .Data.Query))}}
+        {{template "search_results.html" (map "Query" .Data.Query "Posts" .Data.Results "Users" .Data.Users "NextCursor" .NextCursor "TimelineURL" (print "/htmx/search?q=" .Data.Query))}}
     {{else}}
         <div class="empty-state">
             <p>Search for posts or users</p>

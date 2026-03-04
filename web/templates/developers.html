@@ -21,13 +21,13 @@
             <tbody>
                 <tr><td>GET</td><td>/api/v1/global</td><td>No</td><td>Global timeline</td></tr>
                 <tr><td>GET</td><td>/api/v1/timeline</td><td>Yes</td><td>Home timeline (follows)</td></tr>
-                <tr><td>POST</td><td>/api/v1/tweets</td><td>Yes</td><td>Create a tweet</td></tr>
-                <tr><td>GET</td><td>/api/v1/tweets/{id}</td><td>No</td><td>Get a single tweet</td></tr>
-                <tr><td>DELETE</td><td>/api/v1/tweets/{id}</td><td>Yes</td><td>Delete your tweet</td></tr>
+                <tr><td>POST</td><td>/api/v1/posts</td><td>Yes</td><td>Create a post</td></tr>
+                <tr><td>GET</td><td>/api/v1/posts/{id}</td><td>No</td><td>Get a single post</td></tr>
+                <tr><td>DELETE</td><td>/api/v1/posts/{id}</td><td>Yes</td><td>Delete your post</td></tr>
                 <tr><td>GET</td><td>/api/v1/users/{username}</td><td>No</td><td>Get user profile</td></tr>
                 <tr><td>POST</td><td>/api/v1/users/{username}/follow</td><td>Yes</td><td>Follow a user</td></tr>
                 <tr><td>DELETE</td><td>/api/v1/users/{username}/follow</td><td>Yes</td><td>Unfollow a user</td></tr>
-                <tr><td>GET</td><td>/api/v1/search?q=term</td><td>No</td><td>Search tweets</td></tr>
+                <tr><td>GET</td><td>/api/v1/search?q=term</td><td>No</td><td>Search posts</td></tr>
             </tbody>
         </table>
 
@@ -37,13 +37,13 @@ curl -H "Authorization: Bearer vst_YOUR_TOKEN" \
   -H "Accept: application/json" \
   BASE_URL/api/v1/global
 
-# Post a tweet
+# Create a post
 curl -X POST -H "Authorization: Bearer vst_YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"content":"Hello from the API!"}' \
-  BASE_URL/api/v1/tweets
+  BASE_URL/api/v1/posts
 
-# Search tweets
+# Search posts
 curl -H "Accept: application/json" \
   "BASE_URL/api/v1/search?q=hello"</code></pre>
 

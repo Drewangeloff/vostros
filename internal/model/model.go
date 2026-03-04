@@ -16,7 +16,7 @@ type User struct {
 }
 
 // PublicProfile returns a JSON-safe map that excludes sensitive fields.
-// Use this for public-facing API responses (profile, search, tweets).
+// Use this for public-facing API responses (profile, search, posts).
 func (u *User) PublicProfile() map[string]any {
 	return map[string]any{
 		"id":           u.ID,
@@ -37,7 +37,7 @@ func (u *User) OwnProfile() map[string]any {
 	return p
 }
 
-type Tweet struct {
+type Post struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
 	Content   string    `json:"content"`
@@ -53,7 +53,7 @@ type UserStats struct {
 	UserID         string `json:"user_id"`
 	FollowerCount  int    `json:"follower_count"`
 	FollowingCount int    `json:"following_count"`
-	TweetCount     int    `json:"tweet_count"`
+	PostCount      int    `json:"post_count"`
 }
 
 type OutboxEvent struct {
