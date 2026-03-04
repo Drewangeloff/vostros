@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/drewangeloff/old_school_bird/internal/auth"
-	"github.com/drewangeloff/old_school_bird/internal/ctxutil"
-	"github.com/drewangeloff/old_school_bird/internal/model"
-	"github.com/drewangeloff/old_school_bird/internal/tmpl"
+	"github.com/drewangeloff/vostros/internal/auth"
+	"github.com/drewangeloff/vostros/internal/ctxutil"
+	"github.com/drewangeloff/vostros/internal/model"
+	"github.com/drewangeloff/vostros/internal/tmpl"
 )
 
 var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,20}$`)

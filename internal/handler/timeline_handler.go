@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/drewangeloff/old_school_bird/internal/ctxutil"
-	"github.com/drewangeloff/old_school_bird/internal/tmpl"
+	"github.com/drewangeloff/vostros/internal/ctxutil"
+	"github.com/drewangeloff/vostros/internal/tmpl"
 )
 
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {

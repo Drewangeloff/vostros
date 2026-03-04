@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/drewangeloff/old_school_bird/internal/auth"
-	"github.com/drewangeloff/old_school_bird/internal/model"
-	"github.com/drewangeloff/old_school_bird/internal/moderation"
-	"github.com/drewangeloff/old_school_bird/internal/repository"
-	"github.com/drewangeloff/old_school_bird/internal/tmpl"
+	"github.com/drewangeloff/vostros/internal/auth"
+	"github.com/drewangeloff/vostros/internal/model"
+	"github.com/drewangeloff/vostros/internal/moderation"
+	"github.com/drewangeloff/vostros/internal/repository"
+	"github.com/drewangeloff/vostros/internal/tmpl"
 )
 
 type Handler struct {

@@ -1,4 +1,4 @@
-package old_school_bird
+package vostros
 
 import "embed"
 

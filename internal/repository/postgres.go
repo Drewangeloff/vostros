@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/drewangeloff/old_school_bird/internal/model"
+	"github.com/drewangeloff/vostros/internal/model"
 )
 
 type PostgresRepo struct {

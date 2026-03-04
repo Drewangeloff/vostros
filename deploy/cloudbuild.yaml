@@ -5,11 +5,11 @@ steps:
       - '-f'
       - 'deploy/Dockerfile'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/old-school-bird:$SHORT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/vostros:$SHORT_SHA'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/old-school-bird:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/vostros:latest'
       - '.'
 
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/old-school-bird:$SHORT_SHA'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/old-school-bird:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/vostros:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/bird/vostros:latest'

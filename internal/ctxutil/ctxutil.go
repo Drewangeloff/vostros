@@ -3,7 +3,7 @@ package ctxutil
 import (
 	"context"
 
-	"github.com/drewangeloff/old_school_bird/internal/model"
+	"github.com/drewangeloff/vostros/internal/model"
 )
 
 type contextKey string

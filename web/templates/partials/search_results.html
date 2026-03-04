@@ -15,7 +15,7 @@
 {{end}}
 
 {{if .Tweets}}
-<h3 class="results-heading">Tweets</h3>
+<h3 class="results-heading">Posts</h3>
 {{end}}
 
 {{template "tweet_list.html" (map "Tweets" .Tweets "NextCursor" .NextCursor "TimelineURL" .TimelineURL)}}

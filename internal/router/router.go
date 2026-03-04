@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/drewangeloff/old_school_bird/internal/auth"
-	"github.com/drewangeloff/old_school_bird/internal/handler"
-	"github.com/drewangeloff/old_school_bird/internal/ratelimit"
+	"github.com/drewangeloff/vostros/internal/auth"
+	"github.com/drewangeloff/vostros/internal/handler"
+	"github.com/drewangeloff/vostros/internal/ratelimit"
 )
 
 func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter *ratelimit.Limiter) http.Handler {

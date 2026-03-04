@@ -10,17 +10,17 @@ test:
 	go test -race -count=1 ./...
 
 docker-build:
-	docker build -f deploy/Dockerfile -t old-school-bird .
+	docker build -f deploy/Dockerfile -t vostros .
 
 docker-run:
-	docker run -p 8080:8080 -e JWT_SECRET=dev -e DATABASE_URL=$(DATABASE_URL) old-school-bird
+	docker run -p 8080:8080 -e JWT_SECRET=dev -e DATABASE_URL=$(DATABASE_URL) vostros
 
 cloud-build:
 	gcloud builds submit --config=deploy/cloudbuild.yaml --substitutions=SHORT_SHA=$$(git rev-parse --short HEAD) .
 
 deploy:
-	gcloud run deploy old-school-bird \
-		--image us-central1-docker.pkg.dev/old-school-bird/bird/old-school-bird:latest \
+	gcloud run deploy vostros \
+		--image us-central1-docker.pkg.dev/vostros/bird/vostros:latest \
 		--region us-central1 \
 		--platform managed \
 		--allow-unauthenticated \

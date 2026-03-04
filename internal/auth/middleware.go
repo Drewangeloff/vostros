@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/drewangeloff/old_school_bird/internal/ctxutil"
-	"github.com/drewangeloff/old_school_bird/internal/repository"
+	"github.com/drewangeloff/vostros/internal/ctxutil"
+	"github.com/drewangeloff/vostros/internal/repository"
 )
 
 type Middleware struct {

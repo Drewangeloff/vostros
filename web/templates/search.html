@@ -2,7 +2,7 @@
     <input type="search"
            name="q"
            class="search-input"
-           placeholder="Search tweets and users..."
+           placeholder="Search posts and users..."
            value="{{.Data.Query}}"
            hx-get="/htmx/search"
            hx-trigger="keyup changed delay:300ms"
@@ -16,7 +16,7 @@
         {{template "search_results.html" (map "Query" .Data.Query "Tweets" .Data.Results "Users" .Data.Users "NextCursor" .NextCursor "TimelineURL" (print "/htmx/search?q=" .Data.Query))}}
     {{else}}
         <div class="empty-state">
-            <p>Search for tweets or users</p>
+            <p>Search for posts or users</p>
         </div>
     {{end}}
 </div>

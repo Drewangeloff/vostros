@@ -1,4 +1,4 @@
-module github.com/drewangeloff/old_school_bird
+module github.com/drewangeloff/vostros
 
 go 1.25.0
 

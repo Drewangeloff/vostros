@@ -11,16 +11,16 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	root "github.com/drewangeloff/old_school_bird"
-	"github.com/drewangeloff/old_school_bird/internal/auth"
-	"github.com/drewangeloff/old_school_bird/internal/config"
-	"github.com/drewangeloff/old_school_bird/internal/fanout"
-	"github.com/drewangeloff/old_school_bird/internal/handler"
-	"github.com/drewangeloff/old_school_bird/internal/moderation"
-	"github.com/drewangeloff/old_school_bird/internal/ratelimit"
-	"github.com/drewangeloff/old_school_bird/internal/repository"
-	"github.com/drewangeloff/old_school_bird/internal/router"
-	"github.com/drewangeloff/old_school_bird/internal/tmpl"
+	root "github.com/drewangeloff/vostros"
+	"github.com/drewangeloff/vostros/internal/auth"
+	"github.com/drewangeloff/vostros/internal/config"
+	"github.com/drewangeloff/vostros/internal/fanout"
+	"github.com/drewangeloff/vostros/internal/handler"
+	"github.com/drewangeloff/vostros/internal/moderation"
+	"github.com/drewangeloff/vostros/internal/ratelimit"
+	"github.com/drewangeloff/vostros/internal/repository"
+	"github.com/drewangeloff/vostros/internal/router"
+	"github.com/drewangeloff/vostros/internal/tmpl"
 )
 
 func main() {

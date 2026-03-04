@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/drewangeloff/old_school_bird/internal/ctxutil"
-	"github.com/drewangeloff/old_school_bird/internal/tmpl"
+	"github.com/drewangeloff/vostros/internal/ctxutil"
+	"github.com/drewangeloff/vostros/internal/tmpl"
 )
 
 func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {

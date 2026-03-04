@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/drewangeloff/old_school_bird/internal/auth"
-	"github.com/drewangeloff/old_school_bird/internal/ctxutil"
-	"github.com/drewangeloff/old_school_bird/internal/model"
-	"github.com/drewangeloff/old_school_bird/internal/tmpl"
+	"github.com/drewangeloff/vostros/internal/auth"
+	"github.com/drewangeloff/vostros/internal/ctxutil"
+	"github.com/drewangeloff/vostros/internal/model"
+	"github.com/drewangeloff/vostros/internal/tmpl"
 )
 
 func (h *Handler) PostTweet(w http.ResponseWriter, r *http.Request) {
@@ -45,9 +45,9 @@ func (h *Handler) PostTweet(w http.ResponseWriter, r *http.Request) {
 	content = strings.TrimSpace(content)
 	if content == "" || len(content) > 256 {
 		if tmpl.WantsJSON(r) {
-			h.jsonError(w, "tweet must be 1-256 characters", http.StatusBadRequest)
+			h.jsonError(w, "post must be 1-256 characters", http.StatusBadRequest)
 		} else {
-			http.Error(w, "tweet must be 1-256 characters", http.StatusBadRequest)
+			http.Error(w, "post must be 1-256 characters", http.StatusBadRequest)
 		}
 		return
 	}
@@ -128,7 +128,7 @@ func (h *Handler) DeleteTweet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// HTMX: return empty to remove the tweet from DOM
-	w.Header().Set("HX-Trigger", `{"showToast":{"message":"Tweet deleted","type":"success"}}`)
+	w.Header().Set("HX-Trigger", `{"showToast":{"message":"Post deleted","type":"success"}}`)
 	w.WriteHeader(http.StatusOK)
 }
 
