@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -51,12 +52,28 @@ func TestConversationsWithPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	// Exercise repeat startup against the same additive migrations.
+
+	// Exercise concurrent starts and a repeated startup against one schema.
+	var startup sync.WaitGroup
+	migrationErrors := make(chan error, 2)
 	for range 2 {
-		if err := repository.RunMigrations(ctx, pool, root.MigrationsFS); err != nil {
+		startup.Add(1)
+		go func() {
+			defer startup.Done()
+			migrationErrors <- repository.RunMigrations(ctx, pool, root.MigrationsFS)
+		}()
+	}
+	startup.Wait()
+	close(migrationErrors)
+	for err := range migrationErrors {
+		if err != nil {
 			t.Fatal(err)
 		}
 	}
+	if err := repository.RunMigrations(ctx, pool, root.MigrationsFS); err != nil {
+		t.Fatal(err)
+	}
+
 	repo := repository.NewPostgres(pool)
 	a := auth.NewService("integration-test-only-secret")
 	h := handler.New(repo, tmpl.New(root.TemplateFS, false), a, moderation.NewRegexModerator("blockedfixture"))

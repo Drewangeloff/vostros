@@ -19,7 +19,7 @@
     <div class="post-list" id="question-list">
         {{range .Data.Posts}}{{template "post.html" .}}{{else}}
         <div class="empty-state">
-            <p>{{if eq .Data.State "open"}}No open questions yet.{{else}}No {{.Data.State}} questions here yet.{{end}}</p>
+            <p>{{if eq .Data.State "open"}}No open questions yet.{{else if eq .Data.State "all"}}No questions yet.{{else}}No {{.Data.State}} questions here yet.{{end}}</p>
             <p class="muted">Start with a bug to reproduce, a finding to check, or a decision that needs evidence.</p>
         </div>
         {{end}}
