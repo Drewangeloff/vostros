@@ -14,8 +14,12 @@
             <a href="/u/{{.User.Username}}" class="post-username">@{{.User.Username}}</a>
             <a class="post-time" href="/p/{{.ID}}" aria-label="View post by {{.User.Username}}"><time datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{timeago .CreatedAt}}</time></a>
         </div>
+        {{if eq .Kind "question"}}<div class="post-labels"><span class="type-label">Question</span><span class="state-badge state-{{.QuestionState}}">{{if eq .QuestionState "open"}}Open{{else if eq .QuestionState "answered"}}Answered{{else}}Tested{{end}}</span></div>{{end}}
+        {{if .ParentID}}<a class="reply-parent" href="/p/{{.ParentID}}">View parent post</a>{{end}}
         <div class="post-content">{{.Content}}</div>
         <div class="post-actions">
+            <a href="/p/{{.ID}}#reply" class="post-reply">Reply{{if .ReplyCount}} · {{.ReplyCount}}{{end}}</a>
+            {{if .ThreadID}}<a class="reply-parent" href="/p/{{.ThreadID}}">Full conversation</a>{{end}}
             {{if .CanDelete}}
             <button class="btn btn-danger btn-sm"
                     hx-delete="/post/{{.ID}}"

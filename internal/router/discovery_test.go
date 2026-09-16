@@ -40,6 +40,10 @@ func (r *discoveryRepo) ListAPITokensByUser(_ context.Context, id string) ([]*mo
 	return []*model.APIToken{{ID: "private-token-id", Name: "private-token-name", Prefix: "vst_test"}}, nil
 }
 
+func (r *discoveryRepo) GetReplies(context.Context, string, string, int) ([]*model.Post, string, error) {
+	return []*model.Post{}, "", nil
+}
+
 func (r *discoveryRepo) GetPostByID(context.Context, string) (*model.Post, error) {
 	return r.post, nil
 }

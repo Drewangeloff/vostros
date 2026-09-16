@@ -11,7 +11,18 @@ import (
 )
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsFS embed.FS) error {
-	_, err := pool.Exec(ctx, `
+	// Cloud Run may start several revisions at once. Serialize schema changes on
+	// one connection so only one process applies each version.
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquiring migration connection: %w", err)
+	}
+	defer conn.Release()
+	if _, err = conn.Exec(ctx, `SELECT pg_advisory_lock(784637267)`); err != nil {
+		return fmt.Errorf("locking migrations: %w", err)
+	}
+	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock(784637267)`)
+	_, err = conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version TEXT PRIMARY KEY,
 			applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -34,7 +45,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsFS embed.F
 		name := entry.Name()
 
 		var exists bool
-		err := pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)", name).Scan(&exists)
+		err := conn.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)", name).Scan(&exists)
 		if err != nil {
 			return fmt.Errorf("checking migration %s: %w", name, err)
 		}
@@ -47,7 +58,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsFS embed.F
 			return fmt.Errorf("reading migration %s: %w", name, err)
 		}
 
-		tx, err := pool.Begin(ctx)
+		tx, err := conn.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("starting transaction for %s: %w", name, err)
 		}

@@ -110,7 +110,7 @@ func (r *PostgresRepo) UpdateUserRole(ctx context.Context, userID string, role s
 
 func (r *PostgresRepo) GetUserStats(ctx context.Context, userID string) (*model.UserStats, error) {
 	s := &model.UserStats{}
-	err := r.pool.QueryRow(ctx, `SELECT user_id, follower_count, following_count, tweet_count FROM user_stats WHERE user_id = $1`, userID).
+	err := r.pool.QueryRow(ctx, `SELECT s.user_id, s.follower_count, s.following_count, (SELECT count(*) FROM tweets t WHERE t.user_id=s.user_id AND t.status='visible' AND `+threadVisible+`) FROM user_stats s WHERE s.user_id = $1`, userID).
 		Scan(&s.UserID, &s.FollowerCount, &s.FollowingCount, &s.PostCount)
 	if err == pgx.ErrNoRows {
 		return &model.UserStats{UserID: userID}, nil
@@ -126,50 +126,74 @@ func (r *PostgresRepo) CreatePostWithOutbox(ctx context.Context, post *model.Pos
 		return err
 	}
 	defer tx.Rollback(ctx)
-
-	_, err = tx.Exec(ctx, `
-		INSERT INTO tweets (id, user_id, content, status, created_at)
-		VALUES ($1, $2, $3, $4, $5)
-	`, post.ID, post.UserID, post.Content, post.Status, post.CreatedAt)
+	if post.Kind == "" {
+		post.Kind = "post"
+	}
+	var parentOwner, threadOwner string
+	if post.ParentID != "" {
+		// Lock the referenced posts until commit so deletion cannot race a reply.
+		err = tx.QueryRow(ctx, `SELECT user_id, COALESCE(thread_id, id) FROM tweets
+            WHERE id=$1 AND status='visible' FOR SHARE`, post.ParentID).Scan(&parentOwner, &post.ThreadID)
+		if err == pgx.ErrNoRows {
+			return ErrPostUnavailable
+		}
+		if err != nil {
+			return err
+		}
+		err = tx.QueryRow(ctx, `SELECT user_id FROM tweets WHERE id=$1 AND status='visible' FOR SHARE`, post.ThreadID).Scan(&threadOwner)
+		if err == pgx.ErrNoRows {
+			return ErrPostUnavailable
+		}
+		if err != nil {
+			return err
+		}
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO tweets
+        (id,user_id,content,status,created_at,kind,question_state,parent_id,thread_id)
+        VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''))`,
+		post.ID, post.UserID, post.Content, post.Status, post.CreatedAt, post.Kind, post.QuestionState, post.ParentID, post.ThreadID)
 	if err != nil {
 		return err
 	}
 
-	payload, _ := json.Marshal(map[string]string{
-		"tweet_id":   post.ID,
-		"user_id":    post.UserID,
-		"created_at": post.CreatedAt.Format(time.RFC3339Nano),
-	})
-	_, err = tx.Exec(ctx, `
-		INSERT INTO outbox (event_type, payload) VALUES ('tweet_created', $1)
-	`, payload)
-	if err != nil {
+	// Replies live in their conversation; top-level posts still fan out to followers.
+	if post.ParentID == "" {
+		payload, _ := json.Marshal(map[string]string{"tweet_id": post.ID, "user_id": post.UserID, "created_at": post.CreatedAt.Format(time.RFC3339Nano)})
+		if _, err = tx.Exec(ctx, `INSERT INTO outbox (event_type,payload) VALUES ('tweet_created',$1)`, payload); err != nil {
+			return err
+		}
+	}
+	if _, err = tx.Exec(ctx, `UPDATE user_stats SET tweet_count=tweet_count+1 WHERE user_id=$1`, post.UserID); err != nil {
 		return err
 	}
 
-	_, err = tx.Exec(ctx, `
-		UPDATE user_stats SET tweet_count = tweet_count + 1 WHERE user_id = $1
-	`, post.UserID)
-	if err != nil {
-		return err
+	// One notification per recipient/post, even if the recipient is also mentioned.
+	for _, recipient := range []string{parentOwner, threadOwner} {
+		if recipient != "" && recipient != post.UserID {
+			if _, err = tx.Exec(ctx, `INSERT INTO notifications (user_id,post_id,kind) VALUES ($1,$2,'reply') ON CONFLICT DO NOTHING`, recipient, post.ID); err != nil {
+				return err
+			}
+		}
 	}
-
+	names := MentionUsernames(post.Content)
+	if len(names) > 0 {
+		_, err = tx.Exec(ctx, `INSERT INTO notifications (user_id,post_id,kind)
+            SELECT id,$1,'mention' FROM users WHERE username=ANY($2) AND id<>$3 ON CONFLICT DO NOTHING`, post.ID, names, post.UserID)
+		if err != nil {
+			return err
+		}
+	}
 	return tx.Commit(ctx)
 }
 
 func (r *PostgresRepo) GetPostByID(ctx context.Context, id string) (*model.Post, error) {
-	t := &model.Post{User: &model.User{}}
-	err := r.pool.QueryRow(ctx, `
-		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
-		       u.id, u.username, u.display_name, u.avatar_url
-		FROM tweets t JOIN users u ON t.user_id = u.id
-		WHERE t.id = $1
-	`, id).Scan(&t.ID, &t.UserID, &t.Content, &t.Status, &t.CreatedAt,
-		&t.User.ID, &t.User.Username, &t.User.DisplayName, &t.User.AvatarURL)
+	p := &model.Post{User: &model.User{}}
+	err := r.pool.QueryRow(ctx, `SELECT `+postColumns+` FROM tweets t JOIN users u ON u.id=t.user_id
+        WHERE t.id=$1 AND `+threadVisible, id).Scan(postDest(p)...)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
-	return t, err
+	return p, err
 }
 
 func (r *PostgresRepo) DeletePost(ctx context.Context, id string) error {
@@ -206,10 +230,9 @@ func (r *PostgresRepo) UpdatePostStatus(ctx context.Context, id string, status s
 
 func (r *PostgresRepo) GetPostsByUserID(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error) {
 	query := `
-		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
-		       u.id, u.username, u.display_name, u.avatar_url
+		SELECT ` + postColumns + `
 		FROM tweets t JOIN users u ON t.user_id = u.id
-		WHERE t.user_id = $1 AND t.status = 'visible'
+		WHERE t.user_id = $1 AND t.status = 'visible' AND ` + threadVisible + `
 	`
 	args := []any{userID}
 	if cursor != "" {
@@ -226,10 +249,9 @@ func (r *PostgresRepo) GetPostsByUserID(ctx context.Context, userID string, curs
 
 func (r *PostgresRepo) GetGlobalTimeline(ctx context.Context, cursor string, limit int) ([]*model.Post, string, error) {
 	query := `
-		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
-		       u.id, u.username, u.display_name, u.avatar_url
+		SELECT ` + postColumns + `
 		FROM tweets t JOIN users u ON t.user_id = u.id
-		WHERE t.status = 'visible'
+		WHERE t.status = 'visible' AND t.parent_id IS NULL
 	`
 	args := []any{}
 	if cursor != "" {
@@ -244,12 +266,10 @@ func (r *PostgresRepo) GetGlobalTimeline(ctx context.Context, cursor string, lim
 
 func (r *PostgresRepo) GetHomeTimeline(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error) {
 	query := `
-		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
-		       u.id, u.username, u.display_name, u.avatar_url
-		FROM timeline_entries te
-		JOIN tweets t ON te.tweet_id = t.id
-		JOIN users u ON t.user_id = u.id
-		WHERE te.user_id = $1 AND t.status = 'visible'
+		SELECT ` + postColumns + `
+		FROM tweets t JOIN users u ON t.user_id = u.id
+        WHERE (t.user_id=$1 OR EXISTS (SELECT 1 FROM timeline_entries te WHERE te.user_id=$1 AND te.tweet_id=t.id))
+        AND t.status = 'visible' AND t.parent_id IS NULL
 	`
 	args := []any{userID}
 	if cursor != "" {
@@ -399,10 +419,9 @@ func (r *PostgresRepo) GetFollowerIDs(ctx context.Context, userID string) ([]str
 
 func (r *PostgresRepo) SearchPosts(ctx context.Context, query string, cursor string, limit int) ([]*model.Post, string, error) {
 	sql := `
-		SELECT t.id, t.user_id, t.content, t.status, t.created_at,
-		       u.id, u.username, u.display_name, u.avatar_url
+		SELECT ` + postColumns + `
 		FROM tweets t JOIN users u ON t.user_id = u.id
-		WHERE t.status = 'visible' AND t.search_vec @@ plainto_tsquery('english', $1)
+		WHERE t.status = 'visible' AND ` + threadVisible + ` AND t.search_vec @@ plainto_tsquery('english', $1)
 	`
 	args := []any{query}
 	if cursor != "" {
@@ -583,8 +602,7 @@ func (r *PostgresRepo) scanPosts(ctx context.Context, query string, args ...any)
 	var nextCursor string
 	for rows.Next() {
 		t := &model.Post{User: &model.User{}}
-		if err := rows.Scan(&t.ID, &t.UserID, &t.Content, &t.Status, &t.CreatedAt,
-			&t.User.ID, &t.User.Username, &t.User.DisplayName, &t.User.AvatarURL); err != nil {
+		if err := rows.Scan(postDest(t)...); err != nil {
 			return nil, "", err
 		}
 		posts = append(posts, t)

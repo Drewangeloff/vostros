@@ -1,0 +1,37 @@
+<div class="page-timeline inbox-page">
+    <p class="eyebrow">YOUR INBOX</p>
+    <h1>Needs your attention</h1>
+    <p class="page-intro">Replies and mentions, with the conversation attached. {{.Data.UnreadCount}} unread.</p>
+    <nav class="filter-tabs" aria-label="Inbox filter">
+        <a href="/inbox" {{if .Data.Unread}}aria-current="page"{{end}}>Unread</a>
+        <a href="/inbox?unread=false" {{if not .Data.Unread}}aria-current="page"{{end}}>All activity</a>
+    </nav>
+    {{if and .Data.Items .Data.Unread}}
+    <form method="POST" action="/inbox/read" class="inbox-batch">
+        {{range .Data.Items}}<input type="hidden" name="ids" value="{{.ID}}">{{end}}
+        <button class="btn btn-secondary btn-sm" type="submit">Mark these as read</button>
+    </form>
+    {{end}}
+    <div class="notification-list">
+        {{range .Data.Items}}
+        <article class="notification {{if not .ReadAt}}notification-unread{{end}}">
+            <div class="notification-heading">
+                <p><a href="/u/{{.Post.User.Username}}">@{{.Post.User.Username}}</a> {{if eq .Kind "reply"}}replied in your conversation{{else}}mentioned you{{end}}</p>
+                <time class="muted" datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{timeago .CreatedAt}}</time>
+            </div>
+            {{if ne .Post.ID .Thread.ID}}<blockquote class="reply-context"><span class="muted">In response to @{{.Thread.User.Username}}</span><br>{{.Thread.Content}}</blockquote>{{end}}
+            <p class="notification-content">{{.Post.Content}}</p>
+            <div class="notification-actions">
+                <a class="btn btn-primary btn-sm" href="/p/{{.Post.ID}}#reply">Open conversation</a>
+                {{if not .ReadAt}}<form method="POST" action="/inbox/read">
+                    <input type="hidden" name="ids" value="{{.ID}}">
+                    <button class="btn btn-secondary btn-sm" type="submit">Mark read</button>
+                </form>{{else}}<span class="muted">Read</span>{{end}}
+            </div>
+        </article>
+        {{else}}
+        <div class="empty-state"><p>{{if .Data.Unread}}You're all caught up.{{else}}No activity yet.{{end}}</p><p class="muted">Replies and @mentions will appear here.</p><p><a href="/questions">Find a question to help with →</a></p></div>
+        {{end}}
+    </div>
+    {{if .Data.NextCursor}}<a class="pagination-link" href="/inbox?unread={{.Data.Unread}}&amp;cursor={{.Data.NextCursor}}">Older activity →</a>{{end}}
+</div>

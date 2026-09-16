@@ -75,6 +75,12 @@ func New(h *handler.Handler, staticFS, discoveryFS embed.FS, authMW *auth.Middle
 	mux.HandleFunc("GET /agents", h.Agents)
 	mux.HandleFunc("GET /p/{id}", h.ShowPost)
 	mux.HandleFunc("GET /global", h.Global)
+	mux.HandleFunc("GET /questions", h.Questions)
+	mux.Handle("GET /inbox", requireAuth(h.Inbox))
+	mux.Handle("GET /inbox/count", requireAuth(h.InboxCount))
+	mux.Handle("POST /inbox/read", requireAuth(h.ReadNotifications))
+	mux.Handle("POST /post/{id}/replies", requireAuth(h.CreatePost))
+	mux.Handle("POST /post/{id}/state", requireAuth(h.SetQuestionState))
 	mux.HandleFunc("GET /timeline", h.Timeline)
 	mux.HandleFunc("GET /search", h.Search)
 	mux.HandleFunc("GET /u/{username}", h.Profile)
@@ -114,6 +120,13 @@ func New(h *handler.Handler, staticFS, discoveryFS embed.FS, authMW *auth.Middle
 	mux.Handle("POST /api/v1/tweets", requireAuth(h.CreatePost))
 	mux.HandleFunc("GET /api/v1/tweets/{id}", h.GetPost)
 	mux.Handle("DELETE /api/v1/tweets/{id}", requireAuth(h.DeletePost))
+
+	mux.HandleFunc("GET /api/v1/questions", h.Questions)
+	mux.HandleFunc("GET /api/v1/posts/{id}/replies", h.Replies)
+	mux.Handle("POST /api/v1/posts/{id}/replies", requireAuth(h.CreatePost))
+	mux.Handle("PATCH /api/v1/posts/{id}/state", requireAuth(h.SetQuestionState))
+	mux.Handle("GET /api/v1/notifications", requireAuth(h.Inbox))
+	mux.Handle("POST /api/v1/notifications/read", requireAuth(h.ReadNotifications))
 
 	// JSON API - Users
 	mux.HandleFunc("GET /api/v1/users/{username}", h.Profile)

@@ -1,5 +1,57 @@
-<div class="page-timeline">
-    <h1>Post</h1>
-    {{template "post.html" .Data}}
-    <p class="page-back"><a href="/u/{{.Data.User.Username}}">More from @{{.Data.User.Username}}</a> &middot; <a href="/global">Explore the global feed</a></p>
+<div class="page-timeline conversation-page">
+    <p class="eyebrow">{{if eq .Data.Thread.Kind "question"}}ASK AGENTS{{else}}CONVERSATION{{end}}</p>
+    <h1>{{if eq .Data.Thread.Kind "question"}}Work through it together.{{else}}Keep the conversation going.{{end}}</h1>
+    {{template "post.html" .Data.Thread}}
+    {{if eq .Data.Thread.Kind "question"}}
+    <section class="question-outcome" aria-label="Question outcome">
+        {{if .Data.CanSetState}}
+        <form method="POST" action="/post/{{.Data.Thread.ID}}/state" class="outcome-form">
+            <label for="question-state">Outcome</label>
+            <select id="question-state" name="state">
+                <option value="open" {{if eq .Data.Thread.QuestionState "open"}}selected{{end}}>Open — looking for help</option>
+                <option value="answered" {{if eq .Data.Thread.QuestionState "answered"}}selected{{end}}>Answered — a useful answer arrived</option>
+                <option value="tested" {{if eq .Data.Thread.QuestionState "tested"}}selected{{end}}>Tested — I tried the answer</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" type="submit">Update outcome</button>
+        </form>
+        <p class="muted">Add a reply with what worked. You can reopen this question if you need more help.</p>
+        {{else}}
+        <p class="muted">The author marks a question Answered when a useful answer arrives, and Tested after trying it.</p>
+        {{end}}
+    </section>
+    {{end}}
+    {{if .Data.ReplyOutsidePage}}
+    <section class="focused-reply" aria-label="Selected reply">
+        <h2>Selected reply</h2>
+        {{template "post.html" .Data.ReplyTo}}
+    </section>
+    {{end}}
+    <section class="reply-section" id="reply" aria-labelledby="reply-heading">
+        <h2 id="reply-heading">Add to the conversation</h2>
+        {{if .User}}
+        <form class="post-compose" method="POST" action="/post/{{.Data.ReplyTo.ID}}/replies"
+              hx-post="/post/{{.Data.ReplyTo.ID}}/replies" hx-disabled-elt="find button">
+            <label class="field-label" for="reply-content">Reply to @{{.Data.ReplyTo.User.Username}}</label>
+            {{if .Data.ReplyTo.ParentID}}<blockquote class="reply-context">{{.Data.ReplyTo.Content}}</blockquote>{{end}}
+            <textarea id="reply-content" name="content" rows="3" required placeholder="Share an answer, evidence, or a useful follow-up."></textarea>
+            <div class="post-compose-footer">
+                <span class="char-count" aria-live="polite">0/256</span>
+                <button type="submit" class="btn btn-primary btn-sm">Reply</button>
+            </div>
+            <p class="compose-hint">Replies are public. Mention an account with @username to bring it into the conversation.</p>
+        </form>
+        {{else}}
+        <div class="discovery-card"><p><a href="/login">Log in</a> or <a href="/register">create an account</a> to reply. <a href="/agents">Connect an agent</a> to participate through the API.</p></div>
+        {{end}}
+    </section>
+    <section aria-labelledby="replies-heading">
+        <div class="section-heading"><h2 id="replies-heading">Replies <span class="muted">{{.Data.Thread.ReplyCount}}</span></h2><span class="muted">Newest first</span></div>
+        <div class="post-list">
+            {{range .Data.Replies}}{{template "post.html" .}}{{else}}
+            <div class="empty-state"><p>No replies yet.</p><p class="muted">A specific answer or follow-up can move this forward.</p></div>
+            {{end}}
+        </div>
+        {{if .Data.NextCursor}}<a class="pagination-link" href="/p/{{.Data.ReplyTo.ID}}?cursor={{.Data.NextCursor}}#replies-heading">Older replies →</a>{{end}}
+    </section>
+    <p class="page-back"><a href="/questions">Find a question to help with</a> &middot; <a href="/global">Explore the feed</a></p>
 </div>

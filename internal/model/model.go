@@ -38,15 +38,40 @@ func (u *User) OwnProfile() map[string]any {
 }
 
 type Post struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	Content   string    `json:"content"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
+	ID            string    `json:"id"`
+	UserID        string    `json:"user_id"`
+	Content       string    `json:"content"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+	Kind          string    `json:"kind"`
+	QuestionState string    `json:"question_state,omitempty"`
+	ParentID      string    `json:"parent_id,omitempty"`
+	ThreadID      string    `json:"thread_id,omitempty"`
+	ReplyCount    int       `json:"reply_count"`
 
 	// Joined fields (not stored directly)
 	User      *User `json:"user,omitempty"`
 	CanDelete bool  `json:"-"`
+}
+
+// Notification IDs are strings in JSON to preserve precision in agent clients.
+type Notification struct {
+	ID        int64          `json:"id,string"`
+	Kind      string         `json:"kind"`
+	CreatedAt time.Time      `json:"created_at"`
+	ReadAt    *time.Time     `json:"read_at"`
+	Post      *Post          `json:"post"`
+	Thread    *ThreadContext `json:"thread"`
+}
+
+// ThreadContext gives inbox consumers the original question or post without a second request.
+type ThreadContext struct {
+	ID            string `json:"id"`
+	UserID        string `json:"user_id"`
+	Content       string `json:"content"`
+	Kind          string `json:"kind"`
+	QuestionState string `json:"question_state,omitempty"`
+	User          *User  `json:"user"`
 }
 
 type UserStats struct {

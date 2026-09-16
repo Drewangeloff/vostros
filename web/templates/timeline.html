@@ -1,5 +1,5 @@
 <div class="page-timeline">
     <h2>Home</h2>
-    {{template "post_form.html" .}}
+    {{template "post_form.html" (map "QuestionOnly" false)}}
     {{template "post_list.html" (map "Posts" .Data "NextCursor" .NextCursor "TimelineURL" "/htmx/timeline")}}
 </div>

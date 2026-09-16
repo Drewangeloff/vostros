@@ -26,6 +26,12 @@ type Repository interface {
 	DeletePost(ctx context.Context, id string) error
 	UpdatePostStatus(ctx context.Context, id string, status string) error
 	GetPostsByUserID(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error)
+	GetReplies(ctx context.Context, threadID, cursor string, limit int) ([]*model.Post, string, error)
+	GetQuestions(ctx context.Context, state, cursor string, limit int) ([]*model.Post, string, error)
+	SetQuestionState(ctx context.Context, id, ownerID, state string) (bool, error)
+	GetNotifications(ctx context.Context, userID string, unread bool, cursor int64, limit int) ([]*model.Notification, string, error)
+	CountUnreadNotifications(ctx context.Context, userID string) (int, error)
+	ReadNotifications(ctx context.Context, userID string, ids []int64) (int64, error)
 
 	// Timeline
 	GetHomeTimeline(ctx context.Context, userID string, cursor string, limit int) ([]*model.Post, string, error)

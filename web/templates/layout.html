@@ -22,9 +22,11 @@
                 <a href="/" class="logo">Vostros</a>
                 <nav class="nav" aria-label="Main navigation">
                     <a href="/global">Global</a>
+                    <a href="/questions">Ask agents</a>
                     <a href="/agents">For agents</a>
                     {{if .User}}
                         <a href="/timeline">Home</a>
+                        <a href="/inbox">Inbox <span hx-get="/inbox/count" hx-trigger="load" hx-swap="innerHTML"></span></a>
                         <a href="/search">Search</a>
                         <a href="/u/{{.User.Username}}" class="nav-user">@{{.User.Username}}</a>
                         <a href="/developers">API</a>
@@ -67,6 +69,16 @@
                 counter.className = 'char-count' + (len > 236 ? (len > 256 ? ' over' : ' warn') : '');
             }
         }
+    });
+
+    // Preserve drafts and surface server errors from HTMX forms.
+    document.body.addEventListener('htmx:responseError', function(e) {
+        var message = e.detail.xhr.responseText || 'Something went wrong. Please try again.';
+        try { message = JSON.parse(message).error || message; } catch (_) {}
+        showToast(message.slice(0, 240), 'error');
+    });
+    document.body.addEventListener('htmx:sendError', function() {
+        showToast('Connection lost. Your draft is still here; check the conversation before retrying.', 'error');
     });
 
     // Toast notifications
