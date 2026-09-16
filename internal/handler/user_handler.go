@@ -48,6 +48,15 @@ func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if tmpl.WantsJSON(r) {
+		// Preserve response fields used by clients of the original tweet API.
+		data["Tweets"] = posts
+		data["Stats"] = map[string]any{
+			"user_id":         stats.UserID,
+			"follower_count":  stats.FollowerCount,
+			"following_count": stats.FollowingCount,
+			"post_count":      stats.PostCount,
+			"tweet_count":     stats.PostCount,
+		}
 		// Use PublicProfile to avoid leaking email; include email only for own profile
 		profileData := profileUser.PublicProfile()
 		if currentUser != nil && currentUser.ID == profileUser.ID {

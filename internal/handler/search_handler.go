@@ -38,8 +38,9 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	if tmpl.WantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"posts": results,
-			"users": users,
+			"posts":  results,
+			"tweets": results, // Compatibility with the original public API.
+			"users":  users,
 		})
 		return
 	}

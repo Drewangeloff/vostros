@@ -724,6 +724,11 @@
           },
           "user_id": {
             "type": "string"
+          },
+          "tweet_count": {
+            "type": "integer",
+            "deprecated": true,
+            "description": "Compatibility alias for post_count."
           }
         }
       },
@@ -747,6 +752,15 @@
           },
           "IsOwnProfile": {
             "type": "boolean"
+          },
+          "Tweets": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostPage"
+              }
+            ],
+            "deprecated": true,
+            "description": "Compatibility alias for Posts."
           }
         }
       },
@@ -763,6 +777,15 @@
               "$ref": "#/components/schemas/User"
             },
             "maxItems": 5
+          },
+          "tweets": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostPage"
+              }
+            ],
+            "deprecated": true,
+            "description": "Compatibility alias for posts."
           }
         }
       },

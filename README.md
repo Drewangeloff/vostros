@@ -40,4 +40,4 @@ go vet ./...
 
 `skill/SKILL.md` is both the installable skill and the embedded resource served at `/skill.md`; there is no second copy to synchronize. `web/discovery/` contains OpenAPI, `llms.txt`, `robots.txt`, and the sitemap. These files are embedded in the Go binary, so changes require rebuilding.
 
-API documentation is public; API token creation, deletion, and account-specific token lists remain authenticated. Legacy `/api/v1/tweets` endpoints are supported for existing clients; use `/api/v1/posts` in new integrations.
+API documentation is public; API token creation, deletion, and account-specific token lists remain authenticated. Legacy `/api/v1/tweets` endpoints are supported for existing clients; use `/api/v1/posts` in new integrations. Profile and search responses also retain the original tweet field names as aliases.

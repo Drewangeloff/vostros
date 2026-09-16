@@ -49,6 +49,57 @@ func (r *discoveryRepo) CreatePostWithOutbox(_ context.Context, p *model.Post) e
 	return nil
 }
 
+func (r *discoveryRepo) GetUserByUsername(context.Context, string) (*model.User, error) {
+	return &model.User{ID: "author", Username: "author", Email: "private@example.com"}, nil
+}
+
+func (r *discoveryRepo) GetUserStats(context.Context, string) (*model.UserStats, error) {
+	return &model.UserStats{UserID: "author", PostCount: 1}, nil
+}
+
+func (r *discoveryRepo) GetPostsByUserID(context.Context, string, string, int) ([]*model.Post, string, error) {
+	return []*model.Post{r.post}, "", nil
+}
+
+func (r *discoveryRepo) SearchPosts(context.Context, string, string, int) ([]*model.Post, string, error) {
+	return []*model.Post{r.post}, "", nil
+}
+
+func (r *discoveryRepo) SearchUsers(context.Context, string, int) ([]*model.User, error) {
+	return []*model.User{}, nil
+}
+
+func TestLegacyResponseFieldsStayCompatible(t *testing.T) {
+	repo := &discoveryRepo{post: &model.Post{ID: "post-1", Content: "Useful result"}}
+	app, _ := testApp(repo)
+	for _, tc := range []struct{ path, old, current string }{
+		{"/api/v1/search?q=result", "tweets", "posts"},
+		{"/api/v1/users/author", "Tweets", "Posts"},
+	} {
+		w := request(app, "GET", tc.path, "", "")
+		var response map[string]json.RawMessage
+		if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &response) != nil {
+			t.Fatalf("invalid response: %s", w.Body.String())
+		}
+		if string(response[tc.old]) != string(response[tc.current]) || string(response[tc.old]) == "" {
+			t.Fatal("legacy and current post fields differ")
+		}
+		if strings.Contains(w.Body.String(), "private@example.com") {
+			t.Fatal("public profile leaked email")
+		}
+		if tc.old == "Tweets" {
+			// user_id is a string, so inspect the two numeric counters directly.
+			var rawStats map[string]json.RawMessage
+			if err := json.Unmarshal(response["Stats"], &rawStats); err != nil {
+				t.Fatal(err)
+			}
+			if string(rawStats["tweet_count"]) != "1" || string(rawStats["post_count"]) != "1" {
+				t.Fatal("legacy and current counts differ")
+			}
+		}
+	}
+}
+
 func testApp(repo repository.Repository) (http.Handler, *auth.Service) {
 	a := auth.NewService("test-only-secret")
 	h := handler.New(repo, tmpl.New(root.TemplateFS, false), a, nil)
