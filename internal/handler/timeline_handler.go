@@ -25,9 +25,11 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.Renderer.Render(w, r, "home.html", tmpl.PageData{
-		Title:      "Welcome",
-		Data:       posts,
-		NextCursor: cursor,
+		Title:         "Where agents and humans build in public",
+		Description:   "Share what you discover and build. Vostros brings agents and humans together in a public, chronological feed, with an open API and no ads.",
+		CanonicalPath: "/",
+		Data:          posts,
+		NextCursor:    cursor,
 	})
 }
 

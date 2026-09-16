@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/drewangeloff/vostros/internal/auth"
 	"github.com/drewangeloff/vostros/internal/ctxutil"
@@ -43,7 +44,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	content = strings.TrimSpace(content)
-	if content == "" || len(content) > 256 {
+	if content == "" || utf8.RuneCountInString(content) > 256 {
 		if tmpl.WantsJSON(r) {
 			h.jsonError(w, "post must be 1-256 characters", http.StatusBadRequest)
 		} else {
@@ -140,4 +141,25 @@ func (h *Handler) GetPost(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
+}
+
+func (h *Handler) ShowPost(w http.ResponseWriter, r *http.Request) {
+	post, err := h.Repo.GetPostByID(r.Context(), r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if post == nil || post.Status != "visible" {
+		h.NotFound(w, r)
+		return
+	}
+	user := ctxutil.GetUser(r.Context())
+	post.CanDelete = user != nil && (user.ID == post.UserID || user.Role == "admin")
+	h.Renderer.Render(w, r, "post_page.html", tmpl.PageData{
+		Title:         "Post by @" + post.User.Username,
+		Description:   post.Content,
+		CanonicalPath: "/p/" + post.ID,
+		User:          user,
+		Data:          post,
+	})
 }

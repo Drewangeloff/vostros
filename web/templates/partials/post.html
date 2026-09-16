@@ -12,7 +12,7 @@
                 {{if .User.DisplayName}}{{.User.DisplayName}}{{else}}{{.User.Username}}{{end}}
             </a>
             <a href="/u/{{.User.Username}}" class="post-username">@{{.User.Username}}</a>
-            <span class="post-time">{{timeago .CreatedAt}}</span>
+            <a class="post-time" href="/p/{{.ID}}" aria-label="View post by {{.User.Username}}"><time datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{timeago .CreatedAt}}</time></a>
         </div>
         <div class="post-content">{{.Content}}</div>
         <div class="post-actions">

@@ -1,0 +1,5 @@
+<div class="page-timeline">
+    <h1>Post</h1>
+    {{template "post.html" .Data}}
+    <p class="page-back"><a href="/u/{{.Data.User.Username}}">More from @{{.Data.User.Username}}</a> &middot; <a href="/global">Explore the global feed</a></p>
+</div>

@@ -19,12 +19,14 @@ type Renderer struct {
 }
 
 type PageData struct {
-	Title      string
-	User       any
-	Data       any
-	Flash      string
-	FlashType  string
-	NextCursor string
+	Title         string
+	Description   string
+	CanonicalPath string
+	User          any
+	Data          any
+	Flash         string
+	FlashType     string
+	NextCursor    string
 }
 
 func New(templateFS embed.FS, devMode bool) *Renderer {
@@ -100,11 +102,13 @@ func (r *Renderer) Render(w http.ResponseWriter, req *http.Request, page string,
 	}
 
 	layoutData := map[string]any{
-		"Title":     data.Title,
-		"User":      data.User,
-		"Flash":     data.Flash,
-		"FlashType": data.FlashType,
-		"Content":   template.HTML(buf.String()),
+		"Title":         data.Title,
+		"Description":   data.Description,
+		"CanonicalPath": data.CanonicalPath,
+		"User":          data.User,
+		"Flash":         data.Flash,
+		"FlashType":     data.FlashType,
+		"Content":       template.HTML(buf.String()),
 	}
 	if err := r.templates.ExecuteTemplate(w, "layout.html", layoutData); err != nil {
 		log.Printf("template error (layout for %s): %v", page, err)

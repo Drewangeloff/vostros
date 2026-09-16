@@ -1,17 +1,19 @@
 package router
 
 import (
+	"bytes"
 	"embed"
 	"io/fs"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/drewangeloff/vostros/internal/auth"
 	"github.com/drewangeloff/vostros/internal/handler"
 	"github.com/drewangeloff/vostros/internal/ratelimit"
 )
 
-func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter *ratelimit.Limiter) http.Handler {
+func New(h *handler.Handler, staticFS, discoveryFS embed.FS, authMW *auth.Middleware, limiter *ratelimit.Limiter) http.Handler {
 	mux := http.NewServeMux()
 
 	// requireAuth wraps a handler with RequireAuth middleware (defense-in-depth)
@@ -25,6 +27,28 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 		log.Fatalf("static fs: %v", err)
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
+
+	// Explicit public resources; never expose the rest of the repository.
+	for path, resource := range map[string]struct{ file, contentType string }{
+		"/skill.md":     {"skill/SKILL.md", "text/markdown; charset=utf-8"},
+		"/llms.txt":     {"web/discovery/llms.txt", "text/plain; charset=utf-8"},
+		"/openapi.json": {"web/discovery/openapi.json", "application/json"},
+		"/robots.txt":   {"web/discovery/robots.txt", "text/plain; charset=utf-8"},
+		"/sitemap.xml":  {"web/discovery/sitemap.xml", "application/xml; charset=utf-8"},
+	} {
+		content, err := discoveryFS.ReadFile(resource.file)
+		if err != nil {
+			log.Fatalf("discovery resource %s: %v", path, err)
+		}
+		mux.HandleFunc("GET "+path, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", resource.contentType)
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+			http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(content))
+		})
+	}
+	mux.HandleFunc("GET /SKILL.md", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/skill.md", http.StatusPermanentRedirect)
+	})
 
 	// Health
 	mux.HandleFunc("GET /health", h.Healthz)
@@ -41,13 +65,15 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	mux.Handle("GET /settings", requireAuth(h.ShowSettings))
 	mux.Handle("POST /settings", requireAuth(h.UpdateSettings))
 
-	// Developers / API tokens (require auth)
-	mux.Handle("GET /developers", requireAuth(h.ShowAPI))
+	// Documentation is public; token management still requires authentication.
+	mux.HandleFunc("GET /developers", h.ShowAPI)
 	mux.Handle("POST /developers/tokens", requireAuth(h.CreateAPIToken))
 	mux.Handle("DELETE /developers/tokens/{id}", requireAuth(h.DeleteAPIToken))
 
 	// Web routes (public reads)
 	mux.HandleFunc("GET /{$}", h.Home)
+	mux.HandleFunc("GET /agents", h.Agents)
+	mux.HandleFunc("GET /p/{id}", h.ShowPost)
 	mux.HandleFunc("GET /global", h.Global)
 	mux.HandleFunc("GET /timeline", h.Timeline)
 	mux.HandleFunc("GET /search", h.Search)
@@ -56,6 +82,8 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	// Post actions (require auth)
 	mux.Handle("POST /post", requireAuth(h.CreatePost))
 	mux.Handle("DELETE /post/{id}", requireAuth(h.DeletePost))
+	mux.Handle("POST /tweet", requireAuth(h.CreatePost))
+	mux.Handle("DELETE /tweet/{id}", requireAuth(h.DeletePost))
 
 	// Follow actions (require auth)
 	mux.Handle("POST /follow/{username}", requireAuth(h.Follow))
@@ -66,6 +94,7 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	mux.HandleFunc("GET /htmx/global", h.HTMXGlobal)
 	mux.HandleFunc("GET /htmx/search", h.HTMXSearch)
 	mux.HandleFunc("GET /htmx/u/{username}/posts", h.HTMXUserPosts)
+	mux.HandleFunc("GET /htmx/u/{username}/tweets", h.HTMXUserPosts)
 
 	// JSON API - Auth (unauthenticated)
 	mux.HandleFunc("POST /api/v1/auth/register", h.Register)
@@ -81,6 +110,10 @@ func New(h *handler.Handler, staticFS embed.FS, authMW *auth.Middleware, limiter
 	mux.Handle("POST /api/v1/posts", requireAuth(h.CreatePost))
 	mux.HandleFunc("GET /api/v1/posts/{id}", h.GetPost)
 	mux.Handle("DELETE /api/v1/posts/{id}", requireAuth(h.DeletePost))
+	// Preserve clients of the original public API after the post terminology change.
+	mux.Handle("POST /api/v1/tweets", requireAuth(h.CreatePost))
+	mux.HandleFunc("GET /api/v1/tweets/{id}", h.GetPost)
+	mux.Handle("DELETE /api/v1/tweets/{id}", requireAuth(h.DeletePost))
 
 	// JSON API - Users
 	mux.HandleFunc("GET /api/v1/users/{username}", h.Profile)
@@ -102,6 +135,7 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'")
 		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		w.Header().Set("Link", `</llms.txt>; rel="describedby"; type="text/plain", </openapi.json>; rel="service-desc"; type="application/json"`)
 		next.ServeHTTP(w, r)
 	})
 }

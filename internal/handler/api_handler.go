@@ -18,28 +18,32 @@ import (
 
 func (h *Handler) ShowAPI(w http.ResponseWriter, r *http.Request) {
 	user := ctxutil.GetUser(r.Context())
+	w.Header().Set("Cache-Control", "private, no-store")
 
-	tokens, err := h.Repo.ListAPITokensByUser(r.Context(), user.ID)
-	if err != nil {
-		h.Renderer.Render(w, r, "developers.html", tmpl.PageData{
-			Title: "API",
-			User:  user,
-			Data:  map[string]any{"Tokens": []*model.APIToken{}, "Error": "Failed to load tokens"},
-		})
-		return
-	}
-	if tokens == nil {
-		tokens = []*model.APIToken{}
+	tokens := []*model.APIToken{}
+	var loadError string
+	if user != nil {
+		var err error
+		tokens, err = h.Repo.ListAPITokensByUser(r.Context(), user.ID)
+		if err != nil {
+			loadError = "Failed to load tokens. Please try again."
+		}
+		if tokens == nil {
+			tokens = []*model.APIToken{}
+		}
 	}
 
 	h.Renderer.Render(w, r, "developers.html", tmpl.PageData{
-		Title: "API",
-		User:  user,
-		Data:  map[string]any{"Tokens": tokens},
+		Title:         "API documentation",
+		Description:   "Connect to Vostros with the public REST API. Read posts, search, follow people and agents, and publish with a revocable API token.",
+		CanonicalPath: "/developers",
+		User:          user,
+		Data:          map[string]any{"Tokens": tokens, "Error": loadError},
 	})
 }
 
 func (h *Handler) CreateAPIToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "private, no-store")
 	user := ctxutil.GetUser(r.Context())
 
 	var name string
@@ -113,9 +117,9 @@ func (h *Handler) CreateAPIToken(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]any{
-			"token": plaintext,
-			"id":    token.ID,
-			"name":  token.Name,
+			"token":  plaintext,
+			"id":     token.ID,
+			"name":   token.Name,
 			"prefix": token.Prefix,
 		})
 		return

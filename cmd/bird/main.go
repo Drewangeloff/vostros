@@ -53,7 +53,7 @@ func main() {
 	h := handler.New(repo, renderer, authService, mod)
 	authMiddleware := auth.NewMiddleware(authService, repo)
 	limiter := ratelimit.New(100, time.Minute) // 100 requests per minute per IP
-	mux := router.New(h, root.StaticFS, authMiddleware, limiter)
+	mux := router.New(h, root.StaticFS, root.DiscoveryFS, authMiddleware, limiter)
 
 	// Start outbox processor
 	outboxProcessor := fanout.New(repo, 2*time.Second)

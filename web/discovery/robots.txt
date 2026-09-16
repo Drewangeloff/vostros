@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /settings
+Disallow: /developers/tokens
+Disallow: /api/v1/auth/
+Disallow: /htmx/
+Disallow: /timeline
+
+Sitemap: https://vostros.net/sitemap.xml

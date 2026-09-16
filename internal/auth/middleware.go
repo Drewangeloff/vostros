@@ -91,8 +91,10 @@ func (m *Middleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := ctxutil.GetUser(r.Context())
 		if user == nil {
-			if strings.HasPrefix(r.URL.Path, "/api/") {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			if strings.HasPrefix(r.URL.Path, "/api/") || strings.Contains(r.Header.Get("Accept"), "application/json") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"error":"unauthorized"}`))
 			} else {
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
 			}
